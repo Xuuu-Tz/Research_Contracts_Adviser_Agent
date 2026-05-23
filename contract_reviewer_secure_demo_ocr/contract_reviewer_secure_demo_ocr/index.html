@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Research Contract Adviser — University Contracting Office</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0f0d0a;
+    --ink-soft: #2a2520;
+    --paper: #f4eee2;
+    --paper-warm: #ebe2cf;
+    --paper-deep: #d9ccb1;
+    --rule: #1a1612;
+    --accent: #8a1d1d;
+    --green: #2f5e3a;
+    --green-soft: #d4dcc8;
+    --amber: #b86b1e;
+    --amber-soft: #e8d2a8;
+    --red: #962020;
+    --red-soft: #e4c4bd;
+    --blue: #1f4a6b;
+    --blue-soft: #c7d4dc;
+    --shadow: 0 1px 0 rgba(15,13,10,0.08), 0 8px 24px -8px rgba(15,13,10,0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { background: var(--paper); color: var(--ink); }
+
+  body {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+    /* paper grain */
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(138, 29, 29, 0.03) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(31, 74, 107, 0.025) 0%, transparent 40%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0 0.05 0 0 0 0.04 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-attachment: fixed;
+  }
+
+  ::selection { background: var(--ink); color: var(--paper); }
+
+  /* ============ MASTHEAD ============ */
+  .masthead {
+    border-bottom: 2px solid var(--ink);
+    padding: 18px 48px 14px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: end;
+    gap: 24px;
+    background: var(--paper);
+    position: relative;
+  }
+
+  .masthead::after {
+    content: '';
+    position: absolute;
+    left: 48px; right: 48px; bottom: -6px;
+    height: 1px; background: var(--ink);
+  }
+
+  .mast-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .mast-meta.right { text-align: right; }
+  .mast-meta strong { color: var(--ink); font-weight: 600; }
+
+  .mast-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 0.95;
+    letter-spacing: -0.025em;
+    text-align: center;
+    font-variation-settings: "opsz" 144;
+  }
+
+  .mast-title em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+
+  /* ============ LAYOUT ============ */
+  .container {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 40px 48px 80px;
+  }
+
+  /* ============ HERO + UPLOAD ============ */
+  .hero {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 56px;
+    padding-bottom: 48px;
+    border-bottom: 1px solid var(--ink);
+    margin-bottom: 48px;
+  }
+
+  .hero-left { position: relative; }
+
+  .kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .kicker::before {
+    content: ''; width: 32px; height: 1px; background: var(--accent);
+  }
+
+  .headline {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(36px, 5vw, 62px);
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    margin-bottom: 24px;
+    font-variation-settings: "opsz" 144;
+  }
+
+  .headline strong { font-weight: 900; }
+  .headline em { font-style: italic; color: var(--accent); font-weight: 500; }
+
+  .lede {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 52ch;
+    font-variation-settings: "opsz" 14;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 32px;
+    margin-top: 36px;
+    padding-top: 24px;
+    border-top: 1px solid var(--paper-deep);
+  }
+
+  .stat { flex: 1; }
+  .stat-num {
+    font-family: 'Fraunces', serif;
+    font-size: 36px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 6px;
+  }
+
+  /* ============ UPLOAD CARD ============ */
+  .upload-card {
+    background: var(--paper-warm);
+    border: 1px solid var(--ink);
+    padding: 32px;
+    position: relative;
+    box-shadow: var(--shadow);
+  }
+
+  .upload-card::before {
+    content: 'FORM RGC-01';
+    position: absolute;
+    top: 14px; right: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--ink-soft);
+  }
+
+  .upload-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    color: var(--ink-soft);
+  }
+
+  .upload-title {
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+
+  .upload-sub {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 24px;
+  }
+
+  .field {
+    margin-bottom: 16px;
+  }
+
+  .field label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .field select,
+  .field input[type="text"] {
+    width: 100%;
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 10px 12px;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    border-radius: 0;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .field select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%230f0d0a' fill='none' stroke-width='1.5'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 32px;
+  }
+
+  .field select:focus,
+  .field input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+
+  .dropzone {
+    border: 1.5px dashed var(--ink);
+    background:
+      repeating-linear-gradient(45deg, transparent 0, transparent 6px, rgba(15,13,10,0.02) 6px, rgba(15,13,10,0.02) 7px),
+      var(--paper);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    position: relative;
+  }
+
+  .dropzone.dragover {
+    border-color: var(--accent);
+    background: var(--paper);
+  }
+
+  .dropzone:hover { border-color: var(--accent); }
+
+  .dropzone-icon {
+    width: 36px; height: 36px;
+    margin: 0 auto 10px;
+    display: block;
+  }
+
+  .dropzone-text {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 500;
+  }
+
+  .dropzone-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+
+  .file-pill {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--ink);
+    color: var(--paper);
+    margin-top: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .file-pill.shown { display: flex; }
+
+  .file-pill .name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-pill button {
+    background: none;
+    border: 1px solid var(--paper);
+    color: var(--paper);
+    width: 22px; height: 22px;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1;
+  }
+
+  .submit-btn {
+    width: 100%;
+    margin-top: 22px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+  }
+
+  .submit-btn:hover:not(:disabled) { background: var(--accent); }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .submit-btn .arrow { display: inline-block; margin-left: 8px; transition: transform 0.2s; }
+  .submit-btn:hover:not(:disabled) .arrow { transform: translateX(4px); }
+
+  /* ============ ANALYSIS / LOADING ============ */
+  .analyzing {
+    display: none;
+    padding: 60px 0;
+    text-align: center;
+  }
+  .analyzing.shown { display: block; }
+
+  .analyzing-title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 32px;
+    margin-bottom: 28px;
+  }
+
+  .analyzing-steps {
+    max-width: 480px;
+    margin: 0 auto;
+    text-align: left;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--paper-deep);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    opacity: 0.3;
+    transition: opacity 0.4s, color 0.4s;
+  }
+
+  .step.active { opacity: 1; color: var(--ink); }
+  .step.done { opacity: 1; color: var(--green); }
+
+  .step-num {
+    width: 22px; height: 22px;
+    border: 1px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    border-radius: 50%;
+  }
+
+  .step.done .step-num::after { content: '✓'; }
+  .step.done .step-num-text { display: none; }
+
+  /* ============ REPORT ============ */
+  .report {
+    display: none;
+    animation: fadeInUp 0.6s ease;
+  }
+  .report.shown { display: block; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .report-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 40px;
+    padding-bottom: 32px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 40px;
+    position: relative;
+  }
+
+  .report-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .report-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(32px, 4vw, 48px);
+    line-height: 1;
+    letter-spacing: -0.025em;
+    margin-bottom: 16px;
+    font-variation-settings: "opsz" 144;
+  }
+
+  .report-title strong { font-weight: 900; }
+
+  .report-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    line-height: 2;
+  }
+  .report-meta .label { color: var(--ink-soft); display: inline-block; width: 90px; }
+  .report-meta .val { color: var(--ink); font-weight: 600; }
+
+  .stamp {
+    position: absolute;
+    top: -10px;
+    right: 0;
+    transform: rotate(-8deg);
+    border: 2.5px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    text-transform: uppercase;
+    opacity: 0.85;
+    background: rgba(244, 238, 226, 0.5);
+  }
+
+  /* Summary grid */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin-bottom: 56px;
+    border: 1px solid var(--ink);
+  }
+
+  .summary-tile {
+    padding: 24px;
+    border-right: 1px solid var(--ink);
+    position: relative;
+    background: var(--paper-warm);
+  }
+  .summary-tile:last-child { border-right: none; }
+
+  .summary-tile.green { background: var(--green-soft); }
+  .summary-tile.amber { background: var(--amber-soft); }
+  .summary-tile.red { background: var(--red-soft); }
+  .summary-tile.blue { background: var(--blue-soft); }
+
+  .summary-flag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .summary-tile.green .summary-flag { color: var(--green); }
+  .summary-tile.amber .summary-flag { color: var(--amber); }
+  .summary-tile.red .summary-flag { color: var(--red); }
+  .summary-tile.blue .summary-flag { color: var(--blue); }
+
+  .summary-count {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 56px;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+  }
+
+  .summary-desc {
+    font-size: 13px;
+    margin-top: 8px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
+
+  /* Section blocks */
+  .section {
+    margin-bottom: 56px;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 24px;
+  }
+
+  .section-num {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 36px;
+    line-height: 1;
+    color: var(--ink-soft);
+  }
+
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    flex: 1;
+  }
+
+  .section-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+
+  /* Flag dot */
+  .flag-dot {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .flag-dot.green { background: var(--green); }
+  .flag-dot.amber { background: var(--amber); }
+  .flag-dot.red { background: var(--red); }
+  .flag-dot.blue { background: var(--blue); }
+
+  /* Clause card */
+  .clause {
+    border: 1px solid var(--ink);
+    margin-bottom: 12px;
+    background: var(--paper-warm);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .clause:hover {
+    transform: translateX(2px);
+    box-shadow: -4px 4px 0 var(--ink);
+  }
+
+  .clause-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .clause-stripe {
+    width: 6px;
+    align-self: stretch;
+    flex-shrink: 0;
+    margin: -16px 0;
+  }
+  .clause.green .clause-stripe { background: var(--green); }
+  .clause.amber .clause-stripe { background: var(--amber); }
+  .clause.red .clause-stripe { background: var(--red); }
+  .clause.blue .clause-stripe { background: var(--blue); }
+
+  .clause-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.08em;
+    min-width: 64px;
+  }
+
+  .clause-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    flex: 1;
+  }
+
+  .clause-toggle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    color: var(--ink-soft);
+    transition: transform 0.2s;
+  }
+
+  .clause.open .clause-toggle { transform: rotate(45deg); }
+
+  .clause-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+  .clause.open .clause-body { max-height: 800px; }
+
+  .clause-body-inner {
+    padding: 4px 24px 24px 90px;
+  }
+
+  .snippet {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--ink);
+    padding: 14px 18px;
+    background: var(--paper);
+    border-left: 3px solid var(--ink);
+    margin-bottom: 16px;
+    position: relative;
+    font-variation-settings: "opsz" 14;
+  }
+
+  .snippet::before {
+    content: '"';
+    position: absolute;
+    top: -8px;
+    left: 8px;
+    font-family: 'Fraunces', serif;
+    font-size: 48px;
+    line-height: 1;
+    color: var(--paper-deep);
+    z-index: 0;
+  }
+  .snippet > span { position: relative; z-index: 1; }
+
+  .rationale-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .rationale {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+
+  .rationale strong { font-weight: 600; }
+
+  /* Empty section */
+  .empty-section {
+    padding: 32px;
+    text-align: center;
+    color: var(--ink-soft);
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 15px;
+    border: 1px dashed var(--paper-deep);
+  }
+
+  /* ============ DISCLAIMER ============ */
+  .disclaimer {
+    margin-top: 56px;
+    padding: 24px 28px;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+  }
+
+  .disclaimer-mark {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border: 1.5px solid var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .disclaimer-body {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+
+  .disclaimer-body strong { color: var(--ink); }
+
+  /* ============ FOOTER ============ */
+  .footer {
+    border-top: 2px solid var(--ink);
+    margin: 60px 48px 0;
+    padding: 24px 0;
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  /* ============ ACTIONS BAR ============ */
+  .actions-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .action-btn {
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 10px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: var(--ink);
+    transition: all 0.2s;
+  }
+
+  .action-btn:hover { background: var(--ink); color: var(--paper); }
+
+  .action-btn.primary { background: var(--ink); color: var(--paper); }
+  .action-btn.primary:hover { background: var(--accent); border-color: var(--accent); }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 900px) {
+    .masthead { padding: 14px 24px 10px; grid-template-columns: 1fr; text-align: center; }
+    .masthead .mast-meta.right { text-align: center; }
+    .container { padding: 32px 24px 60px; }
+    .hero { grid-template-columns: 1fr; gap: 36px; }
+    .report-header { grid-template-columns: 1fr; gap: 20px; }
+    .stamp { position: static; transform: rotate(-4deg); display: inline-block; margin-top: 12px; }
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .summary-tile { border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+    .summary-tile:nth-child(2) { border-right: none; }
+    .summary-tile:nth-child(3), .summary-tile:nth-child(4) { border-bottom: none; }
+    .clause-body-inner { padding-left: 24px; }
+    .footer { margin: 40px 24px 0; flex-direction: column; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ MASTHEAD ============ -->
+<header class="masthead">
+  <div class="mast-meta">
+    <div>Vol. I · Edition 01</div>
+    <div><strong>Research &amp; Grants Contracting</strong></div>
+  </div>
+  <h1 class="mast-title">The Contract <em>Adviser</em></h1>
+  <div class="mast-meta right">
+    <div id="date-meta">—</div>
+    <div><strong>Proof of Concept</strong></div>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- ============ HERO ============ -->
+  <section class="hero" id="hero">
+    <div class="hero-left">
+      <div class="kicker">An AI adviser for contract review</div>
+      <h2 class="headline">
+        Read every <strong>clause.</strong><br>
+        Flag every <em>deviation.</em><br>
+        Decide with <strong>confidence.</strong>
+      </h2>
+      <p class="lede">
+        Submit a research contract drafted by an external organisation. The adviser compares each clause against the University's standard positions and template agreements, surfacing alignments, deviations, conflicts, and gaps — for human review.
+      </p>
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-num">7</div>
+          <div class="stat-label">Contract Types</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">4</div>
+          <div class="stat-label">Flag Categories</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">∼3<span style="font-size:24px">min</span></div>
+          <div class="stat-label">Review Time</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ UPLOAD CARD ============ -->
+    <aside class="upload-card">
+      <div class="upload-label">§ Begin Review</div>
+      <h3 class="upload-title">Submit a contract</h3>
+      <p class="upload-sub">PDF, DOCX, or TXT. Anonymise sensitive parties before upload.</p>
+
+      <div class="field">
+        <label for="contractType">Contract Type</label>
+        <select id="contractType">
+          <option value="auto">Auto-detect from document</option>
+          <option>Public Research Contract</option>
+          <option>Commercial Research Contract</option>
+          <option>Subcontract</option>
+          <option>Material Transfer Agreement</option>
+          <option>Data Transfer Agreement</option>
+          <option>Collaboration Agreement</option>
+          <option>Confidential Disclosure Agreement</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="counterparty">Counterparty (optional)</label>
+        <input type="text" id="counterparty" placeholder="e.g. Nordhaven Biotech Ltd." />
+      </div>
+
+      <div class="field">
+        <label>Document</label>
+        <label for="fileInput" class="dropzone" id="dropzone">
+          <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 3v5h5M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-5z"/>
+            <path d="M12 18v-6M9 15l3-3 3 3"/>
+          </svg>
+          <div class="dropzone-text">Drop file here, or click to browse</div>
+          <div class="dropzone-sub">Max 25 MB</div>
+          <input type="file" id="fileInput" accept=".pdf,.docx,.txt" hidden />
+        </label>
+
+        <div class="file-pill" id="filePill">
+          <span>▸</span>
+          <span class="name" id="fileName">—</span>
+          <button type="button" id="fileClear" aria-label="Remove file">×</button>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submitBtn" disabled>
+        Analyse Contract<span class="arrow">→</span>
+      </button>
+    </aside>
+  </section>
+
+  <!-- ============ ANALYZING ============ -->
+  <section class="analyzing" id="analyzing">
+    <p class="analyzing-title">Reading the document…</p>
+    <div class="analyzing-steps">
+      <div class="step" data-step="0"><span class="step-num"><span class="step-num-text">1</span></span><span>Extracting clauses</span></div>
+      <div class="step" data-step="1"><span class="step-num"><span class="step-num-text">2</span></span><span>Identifying contract type</span></div>
+      <div class="step" data-step="2"><span class="step-num"><span class="step-num-text">3</span></span><span>Comparing to UoA templates</span></div>
+      <div class="step" data-step="3"><span class="step-num"><span class="step-num-text">4</span></span><span>Cross-referencing standard positions</span></div>
+      <div class="step" data-step="4"><span class="step-num"><span class="step-num-text">5</span></span><span>Compiling adviser report</span></div>
+    </div>
+  </section>
+
+  <!-- ============ REPORT ============ -->
+  <section class="report" id="report">
+    <header class="report-header">
+      <div>
+        <div class="report-eyebrow">Adviser Report · For Human Review</div>
+        <h2 class="report-title">Contract <strong>Review</strong> Findings</h2>
+        <div class="report-meta">
+          <div><span class="label">Document</span><span class="val" id="docName">—</span></div>
+          <div><span class="label">Type</span><span class="val" id="docType">—</span></div>
+          <div><span class="label">Clauses</span><span class="val" id="docClauses">—</span></div>
+          <div><span class="label">Counterparty</span><span class="val" id="docParty">—</span></div>
+          <div><span class="label">Generated</span><span class="val" id="docGen">—</span></div>
+        </div>
+      </div>
+      <div class="stamp">For Review Only</div>
+    </header>
+
+    <div class="actions-bar">
+      <button class="action-btn primary" onclick="window.print()">Export PDF</button>
+      <button class="action-btn" id="newReviewBtn">New Review</button>
+      <button class="action-btn" id="expandAllBtn">Expand All</button>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-grid">
+      <div class="summary-tile green">
+        <div class="summary-flag">● Green</div>
+        <div class="summary-count" id="cntGreen">0</div>
+        <div class="summary-desc">Aligned with UoA position</div>
+      </div>
+      <div class="summary-tile amber">
+        <div class="summary-flag">● Amber</div>
+        <div class="summary-count" id="cntAmber">0</div>
+        <div class="summary-desc">Requires Contract Manager review</div>
+      </div>
+      <div class="summary-tile red">
+        <div class="summary-flag">● Red</div>
+        <div class="summary-count" id="cntRed">0</div>
+        <div class="summary-desc">Conflicts with UoA position</div>
+      </div>
+      <div class="summary-tile blue">
+        <div class="summary-flag">● Blue</div>
+        <div class="summary-count" id="cntBlue">0</div>
+        <div class="summary-desc">Not covered in current standards</div>
+      </div>
+    </div>
+
+    <!-- Section: GREEN -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num">I.</span>
+        <h3 class="section-title"><span class="flag-dot green"></span>Green Flags · Align with UoA Position</h3>
+        <span class="section-count" id="lblGreen">0 clauses</span>
+      </div>
+      <div id="listGreen"></div>
+    </section>
+
+    <!-- Section: AMBER -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num">II.</span>
+        <h3 class="section-title"><span class="flag-dot amber"></span>Amber Flags · Requires Contract Manager Review</h3>
+        <span class="section-count" id="lblAmber">0 clauses</span>
+      </div>
+      <div id="listAmber"></div>
+    </section>
+
+    <!-- Section: RED -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num">III.</span>
+        <h3 class="section-title"><span class="flag-dot red"></span>Red Flags · Conflicts with UoA Position</h3>
+        <span class="section-count" id="lblRed">0 clauses</span>
+      </div>
+      <div id="listRed"></div>
+    </section>
+
+    <!-- Section: BLUE -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num">IV.</span>
+        <h3 class="section-title"><span class="flag-dot blue"></span>Blue Flags · Not Covered in UoA Position</h3>
+        <span class="section-count" id="lblBlue">0 clauses</span>
+      </div>
+      <div id="listBlue"></div>
+    </section>
+
+    <!-- Disclaimer -->
+    <div class="disclaimer">
+      <div class="disclaimer-mark">!</div>
+      <div class="disclaimer-body">
+        <strong>This adviser does not provide legal advice.</strong> It is a decision-support tool that compares contract clauses against documented University positions. All findings require human review by a qualified Contract Manager before any decision is made. Confidential information is handled in accordance with the University's data protection policies.
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div>RGC · Research Contract Adviser · POC</div>
+  <div>Built for the RGC Team · Human-in-the-loop</div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<script>
+  /* ============ DATE ============ */
+  const today = new Date();
+  const opts = { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' };
+  document.getElementById('date-meta').textContent =
+    today.toLocaleDateString('en-GB', opts).replace(',', '');
+
+  /* ============ FILE / UPLOAD ============ */
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const filePill = document.getElementById('filePill');
+  const fileName = document.getElementById('fileName');
+  const fileClear = document.getElementById('fileClear');
+  const submitBtn = document.getElementById('submitBtn');
+
+  let currentFile = null;
+
+  function setFile(f) {
+    currentFile = f;
+    if (f) {
+      fileName.textContent = f.name;
+      filePill.classList.add('shown');
+      submitBtn.disabled = false;
+    } else {
+      filePill.classList.remove('shown');
+      submitBtn.disabled = true;
+      fileInput.value = '';
+    }
+  }
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) setFile(e.target.files[0]);
+  });
+
+  fileClear.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFile(null);
+  });
+
+  ['dragenter', 'dragover'].forEach(evt =>
+    dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add('dragover'); })
+  );
+  ['dragleave', 'drop'].forEach(evt =>
+    dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); })
+  );
+  dropzone.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  });
+
+  /* ============ ANALYZE FLOW ============ */
+  const hero = document.getElementById('hero');
+  const analyzing = document.getElementById('analyzing');
+  const report = document.getElementById('report');
+  const steps = document.querySelectorAll('.step');
+
+  submitBtn.addEventListener('click', async () => {
+    if (!currentFile) return;
+
+    const ctype = document.getElementById('contractType').value;
+    const party = document.getElementById('counterparty').value || 'Not specified';
+
+    hero.style.display = 'none';
+    analyzing.classList.add('shown');
+    report.classList.remove('shown');
+
+    // Animate steps
+    for (let i = 0; i < steps.length; i++) {
+      steps[i].classList.add('active');
+      await sleep(700);
+      steps[i].classList.remove('active');
+      steps[i].classList.add('done');
+    }
+
+    // === AZURE OPENAI CALL ===
+    let result;
+
+    try {
+      result = await callAzureFoundryAgent(currentFile, ctype);
+    } catch (error) {
+      console.error("Azure call failed:", error);
+      alert("Azure call failed: " + error.message);
+
+      analyzing.classList.remove('shown');
+      steps.forEach(s => s.classList.remove('done', 'active'));
+      hero.style.display = 'grid';
+
+      return;
+    }
+    // =========================
+
+    // Populate metadata
+    document.getElementById('docName').textContent = currentFile.name;
+    document.getElementById('docType').textContent =
+      ctype === 'auto' ? result.detectedType : ctype;
+    document.getElementById('docClauses').textContent = formatClauseCount(result.clauseInventory);
+    document.getElementById('docParty').textContent = party;
+    document.getElementById('docGen').textContent =
+      today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+      ' · ' + today.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+    renderReport(result);
+
+    await sleep(400);
+    analyzing.classList.remove('shown');
+    steps.forEach(s => s.classList.remove('done', 'active'));
+    report.classList.add('shown');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function formatClauseCount(clauseInventory) {
+    if (!clauseInventory) {
+      return 'Not available';
+    }
+
+    const clauseCount = Number(clauseInventory.clauseCount);
+    if (!Number.isInteger(clauseCount)) {
+      return 'Not available';
+    }
+
+    const warningCount = Array.isArray(clauseInventory.extractionWarnings)
+      ? clauseInventory.extractionWarnings.length
+      : 0;
+    const suffix = clauseCount === 1 ? 'clause detected' : 'clauses detected';
+    const source = clauseInventory.source === 'local-estimate'
+      ? ' · estimated locally'
+      : '';
+
+    return warningCount > 0
+      ? `${clauseCount} ${suffix}${source} · review extraction`
+      : `${clauseCount} ${suffix}${source}`;
+  }
+
+  /* ============ RENDER REPORT ============ */
+  function renderReport(data) {
+    const groups = { green: [], amber: [], red: [], blue: [] };
+    data.flags.forEach(f => groups[f.severity].push(f));
+
+    document.getElementById('cntGreen').textContent = String(groups.green.length).padStart(2, '0');
+    document.getElementById('cntAmber').textContent = String(groups.amber.length).padStart(2, '0');
+    document.getElementById('cntRed').textContent = String(groups.red.length).padStart(2, '0');
+    document.getElementById('cntBlue').textContent = String(groups.blue.length).padStart(2, '0');
+
+    document.getElementById('lblGreen').textContent = groups.green.length + ' clause' + (groups.green.length === 1 ? '' : 's');
+    document.getElementById('lblAmber').textContent = groups.amber.length + ' clause' + (groups.amber.length === 1 ? '' : 's');
+    document.getElementById('lblRed').textContent = groups.red.length + ' clause' + (groups.red.length === 1 ? '' : 's');
+    document.getElementById('lblBlue').textContent = groups.blue.length + ' clause' + (groups.blue.length === 1 ? '' : 's');
+
+    ['green', 'amber', 'red', 'blue'].forEach(sev => {
+      const container = document.getElementById('list' + sev.charAt(0).toUpperCase() + sev.slice(1));
+      container.innerHTML = '';
+      if (groups[sev].length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-section';
+        empty.textContent = 'No clauses in this category.';
+        container.appendChild(empty);
+        return;
+      }
+      groups[sev].forEach((f, i) => {
+        const el = document.createElement('article');
+        el.className = 'clause ' + sev;
+        el.innerHTML = `
+          <div class="clause-stripe"></div>
+          <div class="clause-header">
+            <div class="clause-num">${f.clauseRef}</div>
+            <div class="clause-title">${f.title}</div>
+            <div class="clause-toggle">+</div>
+          </div>
+          <div class="clause-body">
+            <div class="clause-body-inner">
+              <div class="snippet"><span>${f.snippet}</span></div>
+              <div class="rationale-label">Rationale</div>
+              <div class="rationale">${f.rationale}</div>
+            </div>
+          </div>
+        `;
+        const header = el.querySelector('.clause-header');
+        header.addEventListener('click', () => el.classList.toggle('open'));
+        // open the first one in each category by default for visibility
+        if (i === 0) el.classList.add('open');
+        container.appendChild(el);
+      });
+    });
+  }
+
+  /* ============ ACTIONS ============ */
+  document.getElementById('newReviewBtn').addEventListener('click', () => {
+    report.classList.remove('shown');
+    hero.style.display = 'grid';
+    setFile(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  document.getElementById('expandAllBtn').addEventListener('click', (e) => {
+    const all = document.querySelectorAll('.clause');
+    const anyOpen = Array.from(all).some(c => c.classList.contains('open'));
+    all.forEach(c => c.classList.toggle('open', !anyOpen));
+    e.target.textContent = anyOpen ? 'Expand All' : 'Collapse All';
+  });
+  /* ============ BACKEND INTEGRATION + FILE PARSING ============ */
+
+  async function readFileAsText(file) {
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.endsWith(".txt")) {
+      return await file.text();
+    }
+
+    if (fileName.endsWith(".docx")) {
+      return await readDocxFile(file);
+    }
+
+    if (fileName.endsWith(".pdf")) {
+      return await readPdfFile(file);
+    }
+
+    throw new Error("Unsupported file type. Please upload PDF, DOCX, or TXT.");
+  }
+
+  async function readDocxFile(file) {
+    if (!window.mammoth) {
+      throw new Error("Mammoth.js failed to load. Check your internet connection.");
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+
+    if (!result.value || result.value.trim().length === 0) {
+      throw new Error("Could not extract text from DOCX file.");
+    }
+
+    return result.value;
+  }
+
+  async function readPdfFile(file) {
+    if (!window.pdfjsLib) {
+      throw new Error("PDF.js failed to load.");
+    }
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    let fullText = "";
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+
+      // 1. Try normal embedded text first
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map(item => item.str)
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (pageText.length > 80) {
+        fullText += `\n\n--- Page ${pageNum} Text Layer ---\n${pageText}`;
+        continue;
+      }
+
+      // 3. If this page has little/no text, OCR this page only
+      console.log(`Page ${pageNum} has little text. Running OCR...`);
+      const ocrText = await ocrSinglePdfPage(page, pageNum);
+
+      if (ocrText.trim()) {
+        fullText += `\n\n--- Page ${pageNum} OCR ---\n${ocrText}`;
+      } else if (pageText.trim()) {
+        // fallback: keep short embedded text if OCR fails
+        fullText += `\n\n--- Page ${pageNum} Short Text Layer ---\n${pageText}`;
+      }
+    }
+
+    if (!fullText.trim()) {
+      throw new Error("Could not extract readable text from this PDF.");
+    }
+
+    return fullText;
+  }
+
+  async function ocrSinglePdfPage(page, pageNum) {
+    if (!window.Tesseract) {
+      throw new Error("Tesseract.js failed to load.");
+    }
+
+    const viewport = page.getViewport({ scale: 2.0 });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({
+      canvasContext: context,
+      viewport: viewport
+    }).promise;
+
+    const result = await Tesseract.recognize(canvas, "eng", {
+      logger: m => {
+        if (m.status === "recognizing text") {
+          console.log(`OCR page ${pageNum}: ${Math.round(m.progress * 100)}%`);
+        }
+      }
+    });
+
+    return result.data.text.trim();
+  }
+
+  async function callAzureFoundryAgent(file, contractType) {
+    const contractText = await readFileAsText(file);
+
+    const response = await fetch("http://localhost:3000/api/review-contract", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        contractText,
+        contractType
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Backend request failed.");
+    }
+
+    if (!data.clauseInventory) {
+      data.clauseInventory = estimateClauseInventory(contractText);
+    }
+
+    return data;
+  }
+
+  function estimateClauseInventory(contractText) {
+    const lines = contractText
+      .replace(/\r/g, '')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+
+    const clauses = [];
+    const seenRefs = new Set();
+    const topLevelClausePattern =
+      /^(?:clause\s+)?(\d{1,2})(?!\.\d)(?:[\).:]|\s+)([A-Z][A-Za-z0-9 ,/&()'-]{2,120})?/i;
+
+    lines.forEach(line => {
+      const match = line.match(topLevelClausePattern);
+      if (!match) return;
+
+      const clauseRef = match[1];
+      if (seenRefs.has(clauseRef)) return;
+
+      seenRefs.add(clauseRef);
+      clauses.push({
+        clauseRef,
+        heading: (match[2] || 'Untitled clause').trim(),
+        confidence: 0.5
+      });
+    });
+
+    return {
+      clauseCount: clauses.length,
+      clauses,
+      extractionWarnings: [
+        'Clause count estimated locally because the backend did not return clauseInventory.'
+      ],
+      source: 'local-estimate'
+    };
+  }
+</script>
+
+</body>
+</html>
