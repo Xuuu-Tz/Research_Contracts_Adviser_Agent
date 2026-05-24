@@ -104,7 +104,147 @@ function contractExcerpt(contractText, maxChars = 14000) {
     : contractText;
 }
 
-function normalizeReviewResult(result, fallbackType) {
+function normalizeClauseRefForMatch(value) {
+  const text = String(value || "").toLowerCase().trim();
+  if (!text) return "";
+
+  const withoutPrefix = text
+    .replace(/^(clause|section|article)\s+/i, "")
+    .replace(/^no\.\s+/i, "")
+    .trim();
+  const numericRef = withoutPrefix.match(/^(\d+(?:\.\d+)*)\b/);
+
+  if (numericRef) {
+    return numericRef[1];
+  }
+
+  return withoutPrefix.replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function confidenceLabelFromClause(clause) {
+  return typeof clause.confidence === "number" && clause.confidence >= 0.8
+    ? "Medium"
+    : "Low";
+}
+
+function buildExpectedClauseCoverage(clauseInventory) {
+  const clauses = Array.isArray(clauseInventory?.clauses)
+    ? clauseInventory.clauses.map(clause => ({
+        clauseRef: String(clause.clauseRef || "").trim() || "Unnumbered",
+        heading: String(clause.heading || "Unreviewed Clause").trim(),
+        confidence: typeof clause.confidence === "number" ? clause.confidence : 0
+      }))
+    : [];
+  const declaredCount = Number(clauseInventory?.clauseCount);
+  const expectedCount = Number.isInteger(declaredCount) && declaredCount > 0
+    ? declaredCount
+    : clauses.length;
+
+  if (expectedCount <= clauses.length) {
+    return clauses;
+  }
+
+  const seenRefs = new Set(clauses.map(clause => normalizeClauseRefForMatch(clause.clauseRef)));
+  const hasMostlyNumericRefs =
+    clauses.length > 0 &&
+    clauses.filter(clause => /^\d+$/.test(normalizeClauseRefForMatch(clause.clauseRef))).length >=
+      Math.ceil(clauses.length * 0.6);
+  const expectedClauses = [...clauses];
+
+  if (hasMostlyNumericRefs) {
+    for (let index = 1; index <= expectedCount && expectedClauses.length < expectedCount; index++) {
+      const ref = String(index);
+
+      if (seenRefs.has(ref)) {
+        continue;
+      }
+
+      expectedClauses.push({
+        clauseRef: ref,
+        heading: "Recognised clause missing from clause inventory details",
+        confidence: 0
+      });
+      seenRefs.add(ref);
+    }
+  }
+
+  while (expectedClauses.length < expectedCount) {
+    const placeholderNumber = expectedClauses.length + 1;
+    expectedClauses.push({
+      clauseRef: `Unreviewed clause ${placeholderNumber}`,
+      heading: "Recognised clause missing from clause inventory details",
+      confidence: 0
+    });
+  }
+
+  return expectedClauses;
+}
+
+function createBlueCoverageFlag(clause) {
+  return {
+    severity: "blue",
+    clauseRef: clause.clauseRef,
+    title: clause.heading || "Unreviewed Clause",
+    snippet: "No snippet returned by the automated review.",
+    matchedPosition: "No model finding returned for this recognised top-level clause.",
+    rationale:
+      "The automated review did not return a finding for this recognised top-level clause. Treat it as not covered by the current automated analysis and review it manually.",
+    requiredEscalation: "Contract Manager review",
+    confidence: confidenceLabelFromClause(clause)
+  };
+}
+
+function addMissingClauseCoverage(result, clauseInventory) {
+  const clauses = buildExpectedClauseCoverage(clauseInventory);
+
+  if (clauses.length === 0) {
+    result.coverage = {
+      recognisedClauseCount: 0,
+      reviewedFlagCount: result.flags.length,
+      addedBlueFlags: 0
+    };
+    return;
+  }
+
+  const existingClauseRefs = new Set(
+    result.flags
+      .map(flag => normalizeClauseRefForMatch(flag.clauseRef))
+      .filter(Boolean)
+  );
+  let addedBlueFlags = 0;
+
+  for (const clause of clauses) {
+    const clauseKey = normalizeClauseRefForMatch(clause.clauseRef);
+
+    if (!clauseKey || existingClauseRefs.has(clauseKey)) {
+      continue;
+    }
+
+    result.flags.push(createBlueCoverageFlag(clause));
+
+    existingClauseRefs.add(clauseKey);
+    addedBlueFlags++;
+  }
+
+  while (result.flags.length < clauses.length) {
+    const placeholderNumber = result.flags.length + 1;
+
+    result.flags.push(createBlueCoverageFlag({
+      clauseRef: `Unreviewed clause ${placeholderNumber}`,
+      heading: "Recognised clause missing from automated review",
+      confidence: 0
+    }));
+    addedBlueFlags++;
+  }
+
+  result.coverage = {
+    recognisedClauseCount: clauses.length,
+    reviewedFlagCount: result.flags.length,
+    addedBlueFlags
+  };
+}
+
+function normalizeReviewResult(result, fallbackType, clauseInventory) {
   if (!result || typeof result !== "object") {
     throw new Error("Invalid JSON result from model.");
   }
@@ -136,6 +276,8 @@ function normalizeReviewResult(result, fallbackType) {
     };
   });
 
+  addMissingClauseCoverage(result, clauseInventory);
+
   const counts = { green: 0, amber: 0, red: 0, blue: 0 };
 
   for (const flag of result.flags) {
@@ -148,20 +290,24 @@ function normalizeReviewResult(result, fallbackType) {
   result.summary.redCount = counts.red;
   result.summary.blueCount = counts.blue;
 
-  if (!result.summary.overallRisk) {
-    if (counts.red > 0) {
-      result.summary.overallRisk = "High";
-    } else if (counts.amber > 0 || counts.blue > 0) {
-      result.summary.overallRisk = "Medium";
-    } else {
-      result.summary.overallRisk = "Low";
-    }
+  if (counts.red > 0) {
+    result.summary.overallRisk = "High";
+  } else if (counts.amber > 0 || counts.blue > 0) {
+    result.summary.overallRisk = "Medium";
+  } else {
+    result.summary.overallRisk = "Low";
   }
 
   if (!Array.isArray(result.summary.keyIssues)) {
     result.summary.keyIssues = counts.red > 0
       ? ["Red flag clauses require escalation before signing."]
       : ["No major issues identified."];
+  }
+
+  if (result.coverage?.addedBlueFlags > 0) {
+    result.summary.keyIssues.push(
+      `${result.coverage.addedBlueFlags} recognised clause(s) were not returned by the model and were marked blue for manual review.`
+    );
   }
 
   result.disclaimer =
@@ -764,9 +910,11 @@ Flag system:
 
 Important rules:
 - Every identifiable clause should appear in the final output.
+- The flags array must contain one item for every recognised top-level clause in the clause inventory.
 - If a clause has no issue, still include it as a Green Flag.
 - If a clause has no issue, the rationale must include: "No issue identified."
 - If no matching UoA position or template is found, use Blue Flag.
+- If you cannot review a recognised clause using the available knowledge base, include that clause as a Blue Flag instead of omitting it.
 - Use clause references from the recognised clause inventory where possible. Do not invent clause numbers.
 - If multiple templates appear relevant, choose the best match and explain the uncertainty in the rationale.
 
@@ -851,7 +999,7 @@ ${contractText}
   });
 
   const parsed = parseModelJson(raw, "Model did not return valid review JSON.");
-  return normalizeReviewResult(parsed, contractType);
+  return normalizeReviewResult(parsed, contractType, clauseInventory);
 }
 
 app.post("/api/classify-contract", async (req, res) => {
