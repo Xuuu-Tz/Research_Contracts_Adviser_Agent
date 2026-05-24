@@ -1566,6 +1566,22 @@
       : `${clauseCount} ${suffix}${source}`;
   }
 
+  /* ============ 安全转义函数 ============ */
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function displayValue(value, fallback = 'Not specified') {
+  const text = String(value ?? '').trim();
+  return text.length > 0 ? escapeHtml(text) : fallback;
+}
+
+  
   /* ============ RENDER REPORT ============ */
   function renderReport(data) {
     const groups = { green: [], amber: [], red: [], blue: [] };
