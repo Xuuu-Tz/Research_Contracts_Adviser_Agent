@@ -7,6 +7,8 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@azure/ai-agents": "^1.1.0",
+    "@azure/identity": "^4.13.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.3"

@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { AgentsClient } from "@azure/ai-agents";
+import { DefaultAzureCredential } from "@azure/identity";
 
 dotenv.config();
 
@@ -65,7 +67,7 @@ function getAzureOpenAIConfig() {
 async function callAzureJsonChat({ messages, temperature = 0.2, maxTokens = 2000 }) {
   const { apiKey, url } = getAzureOpenAIConfig();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60000);
+  const timeout = setTimeout(() => controller.abort(), 600000); // 10 minutes
 
   try {
     const response = await fetch(url, {
@@ -382,18 +384,15 @@ function normalizeFoundryProjectEndpoint(endpoint) {
 function getFoundryKnowledgeConfig() {
   const projectEndpoint = process.env.FOUNDRY_PROJECT_ENDPOINT;
   const agentName = process.env.FOUNDRY_AGENT_NAME;
-  const agentToken = process.env.FOUNDRY_AGENT_TOKEN;
-  const agentApiKey = process.env.FOUNDRY_AGENT_API_KEY;
   const knowledgeRequired = process.env.FOUNDRY_KNOWLEDGE_REQUIRED === "true";
 
-  if (!projectEndpoint || !agentName || (!agentToken && !agentApiKey)) {
+  if (!projectEndpoint || !agentName) {
     return {
       enabled: false,
       knowledgeRequired,
       missing: [
         !projectEndpoint ? "FOUNDRY_PROJECT_ENDPOINT" : null,
-        !agentName ? "FOUNDRY_AGENT_NAME" : null,
-        !agentToken && !agentApiKey ? "FOUNDRY_AGENT_TOKEN" : null
+        !agentName ? "FOUNDRY_AGENT_NAME" : null
       ].filter(Boolean)
     };
   }
@@ -402,9 +401,7 @@ function getFoundryKnowledgeConfig() {
     enabled: true,
     knowledgeRequired,
     projectEndpoint: normalizeFoundryProjectEndpoint(projectEndpoint),
-    agentName,
-    agentToken,
-    agentApiKey
+    agentName
   };
 }
 
@@ -470,28 +467,16 @@ ${compactContractSignals(contractText)}
 `;
 }
 
-function collectResponseText(value, output = []) {
-  if (!value) return output;
+let cachedAgentsClient = null;
+let cachedAgentsEndpoint = null;
 
-  if (typeof value === "string") {
-    output.push(value);
-    return output;
+function getAgentsClient(projectEndpoint) {
+  if (cachedAgentsClient && cachedAgentsEndpoint === projectEndpoint) {
+    return cachedAgentsClient;
   }
-
-  if (Array.isArray(value)) {
-    for (const item of value) collectResponseText(item, output);
-    return output;
-  }
-
-  if (typeof value === "object") {
-    if (typeof value.output_text === "string") output.push(value.output_text);
-    if (typeof value.text === "string") output.push(value.text);
-    if (typeof value.value === "string") output.push(value.value);
-    if (value.content) collectResponseText(value.content, output);
-    if (value.output) collectResponseText(value.output, output);
-  }
-
-  return output;
+  cachedAgentsClient = new AgentsClient(projectEndpoint, new DefaultAzureCredential());
+  cachedAgentsEndpoint = projectEndpoint;
+  return cachedAgentsClient;
 }
 
 async function retrieveKnowledgeBaseContext({ contractText, contractType, classification }) {
@@ -514,72 +499,47 @@ async function retrieveKnowledgeBaseContext({ contractText, contractType, classi
   }
 
   const query = buildKnowledgeBaseQuery({ contractText, contractType, classification });
-  const headers = {
-    "Content-Type": "application/json"
-  };
-
-  if (config.agentToken) {
-    headers.Authorization = `Bearer ${config.agentToken}`;
-  } else {
-    headers["api-key"] = config.agentApiKey;
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60000);
 
   try {
-    const response = await fetch(`${config.projectEndpoint}/openai/v1/responses`, {
-      method: "POST",
-      signal: controller.signal,
-      headers,
-      body: JSON.stringify({
-        agent: {
-          type: "agent_reference",
-          name: config.agentName
-        },
-        metadata: {
-          purpose: "contract_template_retrieval",
-          contractType: contractType || "Other / Unknown"
-        },
-        input: [
-          {
-            type: "message",
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: query
-              }
-            ]
-          }
-        ],
-        stream: false
-      })
-    });
+    const client = getAgentsClient(config.projectEndpoint);
 
-    const data = await response.json();
+    const thread = await client.threads.create();
+    await client.messages.create(thread.id, "user", query);
 
-    if (!response.ok) {
-      const error = new Error(data.error?.message || "Foundry knowledge base retrieval failed.");
-      error.status = response.status;
-      error.details = data;
-      throw error;
+    const poller = client.runs.createAndPoll(thread.id, config.agentName);
+    const run = await poller.pollUntilDone();
+
+    if (run.status !== "completed") {
+      throw new Error(
+        run.lastError?.message || `Foundry run ended with status ${run.status}.`
+      );
     }
 
-    const context = collectResponseText(data).join("\n").trim();
+    const messages = client.messages.list(thread.id, { order: "desc" });
+    const texts = [];
+
+    for await (const message of messages) {
+      if (message.role !== "assistant") continue;
+      const part = (message.content || []).find(c => c.type === "text" && "text" in c);
+      if (part) {
+        texts.push(part.text.value);
+        break;
+      }
+    }
+
+    const context = texts.join("\n").trim();
 
     return {
       enabled: true,
       used: Boolean(context),
       query,
       context,
-      raw: data
+      raw: { threadId: thread.id, runId: run.id, runStatus: run.status }
     };
   } catch (error) {
-    const message =
-      error.name === "AbortError"
-        ? "Foundry knowledge base retrieval timed out."
-        : error.message || "Foundry knowledge base retrieval failed.";
+    console.error("[Foundry] retrieval failed:", error?.message || error);
+
+    const message = error?.message || "Foundry knowledge base retrieval failed.";
 
     if (config.knowledgeRequired) {
       throw error;
@@ -589,11 +549,9 @@ async function retrieveKnowledgeBaseContext({ contractText, contractType, classi
       enabled: true,
       used: false,
       warning: message,
-      details: error.details,
+      details: error?.details,
       context: ""
     };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

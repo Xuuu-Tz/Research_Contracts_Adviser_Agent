@@ -21,6 +21,7 @@ This is a local demo app for reviewing research contracts. It provides a browser
   - API version.
   - API key.
 - Optional: an Azure AI Foundry Agent with file search enabled and the UoA standard templates uploaded to its knowledge base.
+- Azure CLI login for local Foundry Agent access.
 
 ## Setup
 
@@ -80,18 +81,16 @@ To enable retrieval, add these values to `.env`:
 
 ```bash
 FOUNDRY_PROJECT_ENDPOINT=https://your-foundry-resource.services.ai.azure.com/api/projects/your-project
-FOUNDRY_AGENT_NAME=your-agent-name
-FOUNDRY_AGENT_TOKEN=your-foundry-token
+FOUNDRY_AGENT_NAME=your-agent-id-or-name
 FOUNDRY_KNOWLEDGE_REQUIRED=false
 ```
 
-Get a temporary Foundry token with Azure CLI:
+The backend uses `DefaultAzureCredential` from `@azure/identity` with `@azure/ai-agents`, so you do not need to paste a Foundry token into `.env`. For local development, sign in with Azure CLI before starting the app:
 
 ```bash
-az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv
+az login
+az account set --subscription "your-subscription-name-or-id"
 ```
-
-Paste the token into `FOUNDRY_AGENT_TOKEN`, then restart the server. These tokens expire, so refresh the token if Foundry retrieval starts returning authentication errors.
 
 If `FOUNDRY_KNOWLEDGE_REQUIRED=false`, the app falls back to the built-in prompt and mock position store when Foundry retrieval is not configured or fails. If set to `true`, the review fails fast when the knowledge base cannot be used.
 
@@ -175,7 +174,7 @@ Check that:
 
 - `FOUNDRY_PROJECT_ENDPOINT` points to the Foundry project endpoint, not only the Azure OpenAI resource endpoint.
 - `FOUNDRY_AGENT_NAME` matches the agent that has file search enabled.
-- `FOUNDRY_AGENT_TOKEN` is present and has not expired.
+- You are signed in with Azure CLI using an account that can access the Foundry project and agent.
 - The server was restarted after editing `.env`.
 
 ## Security
