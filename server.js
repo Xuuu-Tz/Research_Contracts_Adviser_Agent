@@ -113,7 +113,7 @@ function normalizeReviewResult(result, fallbackType) {
     result.flags = [];
   }
 
-  result.detectedType = result.detectedType || fallbackType || "Other / Unknown";
+  result.detectedType = fallbackType || result.detectedType || "Other / Unknown";
   result.selectedTemplate = result.selectedTemplate || "Not specified";
   result.knowledgeBaseDocuments = Array.isArray(result.knowledgeBaseDocuments)
     ? result.knowledgeBaseDocuments
@@ -175,44 +175,44 @@ const TEMPLATE_FILE_HINTS = {
   "Confidential Disclosure Agreement": [
     "UoA-CDA Two Way Template.docx"
   ],
-  "Data Access Agreement": [
-    "UoA-Data Access Agreement Agency Template (incoming) May 2024 (1).docx",
+  "Data Access Agreement - Incoming Agency": [
+    "UoA-Data Access Agreement Agency Template (incoming) May 2024 (1).docx"
+  ],
+  "Data Access Agreement - Outgoing": [
     "UoA-Data Access Agreement Template (outgoing) May 2024.docx"
   ],
-  "Data Transfer Agreement": [
-    "UoA-Data Transfer Agreement Template (incoming) April 2024 .docx",
+  "Data Transfer Agreement - Incoming": [
+    "UoA-Data Transfer Agreement Template (incoming) April 2024 .docx"
+  ],
+  "Data Transfer Agreement - Outgoing": [
     "UoA-Data Transfer Agreement Template (outgoing) April 2024.docx"
   ],
-  "Material Transfer Agreement": [
-    "UoA-Material_Transfer_Agreement incoming-Aug 2024.docx",
-    "UoA-Material_Transfer_Agreement_outgoing_Aug 2024.docx",
+  "Material Transfer Agreement - Outbound Key Materials": [
     "UoA-MTA_Outbound for Key Materials-April 2018.docx"
   ],
-  "Research Services Agreement": [
-    "UoA-Research Services Agreement (Agency) _June 2024 .docx",
-    "UoA-Provision of Services Agreement (Agency)_June 2024.docx",
+  "Master Services Agreement": [
     "UoA-Master Services Agreement Template (1).docx"
   ],
-  "Research Contract": [
-    "Research_Contracts_Adviser_Agent.pdf"
+  "Material Transfer Agreement - Incoming": [
+    "UoA-Material_Transfer_Agreement incoming-Aug 2024.docx"
   ],
-  "Commercial Research Contract": [
-    "Research_Contracts_Adviser_Agent.pdf"
+  "Material Transfer Agreement - Outgoing": [
+    "UoA-Material_Transfer_Agreement_outgoing_Aug 2024.docx"
   ],
-  "Public Research Contract": [
-    "Research_Contracts_Adviser_Agent.pdf"
+  "Provision of Services Agreement - Agency": [
+    "UoA-Provision of Services Agreement (Agency)_June 2024.docx"
   ],
-  "Collaboration Agreement": [
+  "Research Collaboration Agreement": [
     "UoA-Research Collaboration Agreement Template (1).docx"
   ],
-  "Research Subcontract": [
-    "UoA-Template Subcontractor Agreement_2025 (1) (1).docx"
-  ],
-  "Subcontract": [
-    "UoA-Template Subcontractor Agreement_2025 (1) (1).docx"
+  "Research Services Agreement - Agency": [
+    "UoA-Research Services Agreement (Agency) _June 2024 .docx"
   ],
   "Student Research Agreement": [
     "UoA-Student Research Agreement Template (April 2018).docx"
+  ],
+  "Subcontractor Agreement": [
+    "UoA-Template Subcontractor Agreement_2025 (1) (1).docx"
   ]
 };
 
@@ -458,44 +458,49 @@ You are a research contract intake classifier for the University of Auckland Res
 Your only task is to classify the contract type. Do not review risks. Do not provide legal advice.
 
 Choose exactly one primaryType from this list:
-- Public Research Contract
-- Commercial Research Contract
-- Subcontract
-- Research Contract
-- Research Subcontract
-- Material Transfer Agreement
-- Data Transfer Agreement
-- Data Access Agreement
-- Collaboration Agreement
 - Confidential Disclosure Agreement
-- Research Services Agreement
+- Data Access Agreement - Incoming Agency
+- Data Access Agreement - Outgoing
+- Data Transfer Agreement - Incoming
+- Data Transfer Agreement - Outgoing
+- Material Transfer Agreement - Outbound Key Materials
+- Master Services Agreement
+- Material Transfer Agreement - Incoming
+- Material Transfer Agreement - Outgoing
+- Provision of Services Agreement - Agency
+- Research Collaboration Agreement
+- Research Services Agreement - Agency
 - Student Research Agreement
-- Hybrid or unclear
+- Subcontractor Agreement
 - Other / Unknown
 
 Use clause signals, not the file name.
 
 Classification and UoA template mapping:
-- Material Transfer Agreement: transfer of biological/material samples, Original Materials, Provider, Recipient, Progeny, Modifications, or Commercial Purposes. Template: UoA MTA Incoming or UoA MTA Outbound depending on whether the University receives or provides the material.
-- Data Transfer Agreement: transfer of Data from a Provider to the University. Template: UoA Data Transfer Agreement Incoming.
-- Data Access Agreement: access to Data held by the University by another party, or access to Data held by a Provider by the University. Template: UoA Data Access Agreement Outgoing or UoA Data Access Agreement Incoming depending on direction.
-- Confidential Disclosure Agreement: mutual or one-way disclosure of Confidential Information. Template: UoA CDA Two Way Template where mutual.
-- Research Services Agreement: provision of research services by the University to a Client. Template: UoA Research Services Agreement.
-- Research Subcontract or Subcontract: subcontractor services under a funded research project, prime agreement, flow-down terms, sponsor terms, or work package under a main award. Template: UoA Subcontractor Agreement.
-- Student Research Agreement: Student, Client, and University for a student research project. Template: UoA Student Research Agreement.
-- Collaboration Agreement: joint research, shared responsibilities, steering committee, joint governance, or shared outputs.
-- Commercial Research Contract: sponsor-funded research, deliverables, milestones, commercial rights, or publication controls.
-- Public Research Contract: grant/funder terms, public funding, research outputs, or institutional reporting obligations.
+- Confidential Disclosure Agreement: disclosure, recipient, non-use, non-disclosure, mutual confidentiality, evaluation purpose. Template: UoA-CDA Two Way Template.docx.
+- Data Access Agreement - Incoming Agency: University accesses or receives access to agency or external-party data without necessarily taking full data transfer ownership. Template: UoA-Data Access Agreement Agency Template (incoming) May 2024 (1).docx.
+- Data Access Agreement - Outgoing: another party accesses data held by the University. Template: UoA-Data Access Agreement Template (outgoing) May 2024.docx.
+- Data Transfer Agreement - Incoming: data is transferred from another party/provider to the University. Template: UoA-Data Transfer Agreement Template (incoming) April 2024 .docx.
+- Data Transfer Agreement - Outgoing: University transfers data to another party/recipient. Template: UoA-Data Transfer Agreement Template (outgoing) April 2024.docx.
+- Material Transfer Agreement - Outbound Key Materials: University provides key materials using the older key materials outbound template. Template: UoA-MTA_Outbound for Key Materials-April 2018.docx.
+- Master Services Agreement: umbrella/master services terms governing future statements of work or service orders. Template: UoA-Master Services Agreement Template (1).docx.
+- Material Transfer Agreement - Incoming: University receives materials, samples, progeny, modifications, or other research materials. Template: UoA-Material_Transfer_Agreement incoming-Aug 2024.docx.
+- Material Transfer Agreement - Outgoing: University provides materials, samples, progeny, modifications, or other research materials. Template: UoA-Material_Transfer_Agreement_outgoing_Aug 2024.docx.
+- Provision of Services Agreement - Agency: University or counterparty provides non-research or agency services under a provision of services arrangement. Template: UoA-Provision of Services Agreement (Agency)_June 2024.docx.
+- Research Collaboration Agreement: joint research, shared work, shared governance, steering committee, or collaborative outputs. Template: UoA-Research Collaboration Agreement Template (1).docx.
+- Research Services Agreement - Agency: University provides research services to an agency/client. Template: UoA-Research Services Agreement (Agency) _June 2024 .docx.
+- Student Research Agreement: student project involving Student, Client, and University. Template: UoA-Student Research Agreement Template (April 2018).docx.
+- Subcontractor Agreement: subcontractor services under a prime funded research project, flow-down terms, sponsor terms, or work package under a main award. Template: UoA-Template Subcontractor Agreement_2025 (1) (1).docx.
 - If no clear match is found, classify it as Other / Unknown.
 
 Return ONLY valid JSON. Do not use markdown.
 
 Use this exact structure:
 {
-  "primaryType": "Material Transfer Agreement",
-  "selectedTemplate": "UoA MTA Incoming",
+  "primaryType": "Material Transfer Agreement - Incoming",
+  "selectedTemplate": "UoA-Material_Transfer_Agreement incoming-Aug 2024.docx",
   "confidence": 0.86,
-  "secondaryTypes": ["Collaboration Agreement"],
+  "secondaryTypes": ["Research Collaboration Agreement"],
   "evidence": [
     "Short reason based on a clause signal"
   ],
@@ -521,19 +526,20 @@ ${contractExcerpt(contractText)}
 
   const parsed = parseModelJson(raw, "Model did not return valid contract classification JSON.");
   const allowedTypes = new Set([
-    "Public Research Contract",
-    "Commercial Research Contract",
-    "Subcontract",
-    "Research Contract",
-    "Research Subcontract",
-    "Material Transfer Agreement",
-    "Data Transfer Agreement",
-    "Data Access Agreement",
-    "Collaboration Agreement",
     "Confidential Disclosure Agreement",
-    "Research Services Agreement",
+    "Data Access Agreement - Incoming Agency",
+    "Data Access Agreement - Outgoing",
+    "Data Transfer Agreement - Incoming",
+    "Data Transfer Agreement - Outgoing",
+    "Material Transfer Agreement - Outbound Key Materials",
+    "Master Services Agreement",
+    "Material Transfer Agreement - Incoming",
+    "Material Transfer Agreement - Outgoing",
+    "Provision of Services Agreement - Agency",
+    "Research Collaboration Agreement",
+    "Research Services Agreement - Agency",
     "Student Research Agreement",
-    "Hybrid or unclear",
+    "Subcontractor Agreement",
     "Other / Unknown"
   ]);
 
@@ -557,7 +563,7 @@ ${contractExcerpt(contractText)}
 
   parsed.needsHumanConfirmation =
     parsed.needsHumanConfirmation === true ||
-    parsed.primaryType === "Hybrid or unclear" ||
+    parsed.primaryType === "Other / Unknown" ||
     parsed.confidence < 0.7;
 
   return parsed;
@@ -651,16 +657,20 @@ You must not provide legal advice, approve contracts, reject contracts, or make 
 
 Use the selected or classified contract type as the starting point, then identify the most relevant UoA standard template from this mapping:
 
-- Material Transfer Agreement: UoA MTA Incoming or UoA MTA Outbound depending on whether the University receives or provides the material.
-- Data Transfer Agreement: UoA Data Transfer Agreement Incoming.
-- Data Access Agreement: UoA Data Access Agreement Incoming or UoA Data Access Agreement Outgoing depending on data direction.
-- Confidential Disclosure Agreement: UoA CDA Two Way Template when mutual, otherwise the closest one-way CDA template.
-- Research Services Agreement: UoA Research Services Agreement.
-- Research Subcontract or Subcontract: UoA Subcontractor Agreement.
-- Student Research Agreement: UoA Student Research Agreement.
-- Collaboration Agreement: UoA collaboration template or closest collaboration position.
-- Public Research Contract: public funder or grant terms position.
-- Commercial Research Contract: commercial sponsor research position.
+- Confidential Disclosure Agreement: UoA-CDA Two Way Template.docx.
+- Data Access Agreement - Incoming Agency: UoA-Data Access Agreement Agency Template (incoming) May 2024 (1).docx.
+- Data Access Agreement - Outgoing: UoA-Data Access Agreement Template (outgoing) May 2024.docx.
+- Data Transfer Agreement - Incoming: UoA-Data Transfer Agreement Template (incoming) April 2024 .docx.
+- Data Transfer Agreement - Outgoing: UoA-Data Transfer Agreement Template (outgoing) April 2024.docx.
+- Material Transfer Agreement - Outbound Key Materials: UoA-MTA_Outbound for Key Materials-April 2018.docx.
+- Master Services Agreement: UoA-Master Services Agreement Template (1).docx.
+- Material Transfer Agreement - Incoming: UoA-Material_Transfer_Agreement incoming-Aug 2024.docx.
+- Material Transfer Agreement - Outgoing: UoA-Material_Transfer_Agreement_outgoing_Aug 2024.docx.
+- Provision of Services Agreement - Agency: UoA-Provision of Services Agreement (Agency)_June 2024.docx.
+- Research Collaboration Agreement: UoA-Research Collaboration Agreement Template (1).docx.
+- Research Services Agreement - Agency: UoA-Research Services Agreement (Agency) _June 2024 .docx.
+- Student Research Agreement: UoA-Student Research Agreement Template (April 2018).docx.
+- Subcontractor Agreement: UoA-Template Subcontractor Agreement_2025 (1) (1).docx.
 - If no clear match is found, use Other / Unknown and explain the uncertainty.
 
 When retrieved knowledge base context is provided, use it as the primary source for:
@@ -777,8 +787,8 @@ Do not wrap the JSON in code fences.
 Use this exact JSON structure:
 
 {
-  "detectedType": "Material Transfer Agreement",
-  "selectedTemplate": "UoA MTA Incoming",
+  "detectedType": "Material Transfer Agreement - Incoming",
+  "selectedTemplate": "UoA-Material_Transfer_Agreement incoming-Aug 2024.docx",
   "knowledgeBaseDocuments": [
     "Document name or section used"
   ],
@@ -844,16 +854,40 @@ ${contractText}
   return normalizeReviewResult(parsed, contractType);
 }
 
+app.post("/api/classify-contract", async (req, res) => {
+  try {
+    const { contractText } = req.body;
+
+    if (!contractText || typeof contractText !== "string") {
+      return res.status(400).json({ error: "contractText is required." });
+    }
+
+    const classification = await classifyContractType(contractText);
+    res.json({ classification });
+  } catch (error) {
+    const message =
+      error.name === "AbortError"
+        ? "Azure OpenAI request timed out."
+        : error.message || "Server error.";
+
+    res.status(error.status || 500).json({
+      error: message,
+      details: error.details,
+      raw: error.raw
+    });
+  }
+});
+
 app.post("/api/review-contract", async (req, res) => {
   try {
-    const { contractText, contractType } = req.body;
+    const { contractText, contractType, classification: confirmedClassification } = req.body;
 
     if (!contractText || typeof contractText !== "string") {
       return res.status(400).json({ error: "contractText is required." });
     }
 
     let finalContractType = contractType;
-    let classification = null;
+    let classification = confirmedClassification || null;
 
     if (!finalContractType || finalContractType === "auto") {
       classification = await classifyContractType(contractText);

@@ -351,6 +351,231 @@
   .submit-btn .arrow { display: inline-block; margin-left: 8px; transition: transform 0.2s; }
   .submit-btn:hover:not(:disabled) .arrow { transform: translateX(4px); }
 
+  /* ============ CLASSIFICATION CONFIRMATION ============ */
+  body.modal-open { overflow: hidden; }
+
+  .classification-modal[hidden] { display: none; }
+
+  .classification-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background:
+      linear-gradient(rgba(15,13,10,0.52), rgba(15,13,10,0.52)),
+      rgba(244,238,226,0.42);
+    backdrop-filter: blur(2px);
+  }
+
+  .classification-panel {
+    width: min(680px, 100%);
+    max-height: min(760px, calc(100vh - 48px));
+    overflow: auto;
+    background:
+      repeating-linear-gradient(45deg, transparent 0, transparent 7px, rgba(15,13,10,0.018) 7px, rgba(15,13,10,0.018) 8px),
+      var(--paper);
+    border: 2px solid var(--ink);
+    box-shadow: 0 24px 80px -28px rgba(15,13,10,0.68);
+    position: relative;
+  }
+
+  .classification-panel::before {
+    content: 'TYPE CHECK RGC-02';
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    color: var(--ink-soft);
+  }
+
+  .classification-top {
+    padding: 34px 34px 22px;
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .classification-kicker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .classification-kicker::before {
+    content: '';
+    width: 34px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .classification-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 0.95;
+    font-weight: 800;
+    letter-spacing: 0;
+    max-width: 520px;
+  }
+
+  .classification-title em {
+    color: var(--accent);
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .classification-body {
+    padding: 24px 34px 30px;
+  }
+
+  .classification-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--ink);
+    margin-bottom: 18px;
+  }
+
+  .classification-field {
+    padding: 16px;
+    min-width: 0;
+    border-right: 1px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .classification-field:nth-child(2n) { border-right: none; }
+  .classification-field:nth-last-child(-n+2) { border-bottom: none; }
+
+  .classification-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .classification-value {
+    font-family: 'Fraunces', serif;
+    font-size: 21px;
+    line-height: 1.1;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .classification-value.small {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 14px;
+    line-height: 1.35;
+    font-weight: 500;
+  }
+
+  .confidence-meter {
+    height: 8px;
+    border: 1px solid var(--ink);
+    margin-top: 10px;
+    background: var(--paper-warm);
+  }
+
+  .confidence-meter span {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+  }
+
+  .classification-select-wrap {
+    margin: 18px 0;
+  }
+
+  .classification-select-wrap label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .classification-select-wrap select {
+    width: 100%;
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 12px;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    border-radius: 0;
+  }
+
+  .classification-evidence {
+    border-top: 1px solid var(--ink);
+    padding-top: 18px;
+  }
+
+  .classification-evidence ul {
+    list-style: none;
+    display: grid;
+    gap: 8px;
+  }
+
+  .classification-evidence li {
+    position: relative;
+    padding-left: 18px;
+    color: var(--ink-soft);
+  }
+
+  .classification-evidence li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 8px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .classification-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 18px 34px;
+    border-top: 1px solid var(--ink);
+    background: var(--paper-warm);
+  }
+
+  .modal-btn {
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    min-height: 42px;
+  }
+
+  .modal-btn:hover { background: var(--ink); color: var(--paper); }
+
+  .modal-btn.primary {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .modal-btn.primary:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
   /* ============ ANALYSIS / LOADING ============ */
   .analyzing {
     display: none;
@@ -785,6 +1010,16 @@
     .summary-tile:nth-child(2) { border-right: none; }
     .summary-tile:nth-child(3), .summary-tile:nth-child(4) { border-bottom: none; }
     .clause-body-inner { padding-left: 24px; }
+    .classification-grid { grid-template-columns: 1fr; }
+    .classification-field,
+    .classification-field:nth-child(2n),
+    .classification-field:nth-last-child(-n+2) {
+      border-right: none;
+      border-bottom: 1px solid var(--ink);
+    }
+    .classification-field:last-child { border-bottom: none; }
+    .classification-actions { flex-direction: column-reverse; }
+    .modal-btn { width: 100%; }
     .footer { margin: 40px 24px 0; flex-direction: column; gap: 10px; }
   }
 </style>
@@ -820,8 +1055,8 @@
       </p>
       <div class="stats-row">
         <div class="stat">
-          <div class="stat-num">7</div>
-          <div class="stat-label">Contract Types</div>
+          <div class="stat-num">14</div>
+          <div class="stat-label">Template Types</div>
         </div>
         <div class="stat">
           <div class="stat-num">4</div>
@@ -844,13 +1079,20 @@
         <label for="contractType">Contract Type</label>
         <select id="contractType">
           <option value="auto">Auto-detect from document</option>
-          <option>Public Research Contract</option>
-          <option>Commercial Research Contract</option>
-          <option>Subcontract</option>
-          <option>Material Transfer Agreement</option>
-          <option>Data Transfer Agreement</option>
-          <option>Collaboration Agreement</option>
           <option>Confidential Disclosure Agreement</option>
+          <option>Data Access Agreement - Incoming Agency</option>
+          <option>Data Access Agreement - Outgoing</option>
+          <option>Data Transfer Agreement - Incoming</option>
+          <option>Data Transfer Agreement - Outgoing</option>
+          <option>Material Transfer Agreement - Outbound Key Materials</option>
+          <option>Master Services Agreement</option>
+          <option>Material Transfer Agreement - Incoming</option>
+          <option>Material Transfer Agreement - Outgoing</option>
+          <option>Provision of Services Agreement - Agency</option>
+          <option>Research Collaboration Agreement</option>
+          <option>Research Services Agreement - Agency</option>
+          <option>Student Research Agreement</option>
+          <option>Subcontractor Agreement</option>
         </select>
       </div>
 
@@ -998,6 +1240,52 @@
   <div>Built for the RGC Team · Human-in-the-loop</div>
 </footer>
 
+<div class="classification-modal" id="classificationModal" hidden role="dialog" aria-modal="true" aria-labelledby="classificationModalTitle">
+  <section class="classification-panel">
+    <div class="classification-top">
+      <div class="classification-kicker">Human confirmation</div>
+      <h2 class="classification-title" id="classificationModalTitle">Confirm the <em>contract type.</em></h2>
+    </div>
+
+    <div class="classification-body">
+      <div class="classification-grid">
+        <div class="classification-field">
+          <div class="classification-label">Detected Type</div>
+          <div class="classification-value" id="classificationDetectedType">-</div>
+        </div>
+        <div class="classification-field">
+          <div class="classification-label">Confidence</div>
+          <div class="classification-value" id="classificationConfidence">-</div>
+          <div class="confidence-meter"><span id="classificationConfidenceBar"></span></div>
+        </div>
+        <div class="classification-field">
+          <div class="classification-label">Template</div>
+          <div class="classification-value small" id="classificationTemplate">-</div>
+        </div>
+        <div class="classification-field">
+          <div class="classification-label">Secondary Types</div>
+          <div class="classification-value small" id="classificationSecondary">-</div>
+        </div>
+      </div>
+
+      <div class="classification-select-wrap">
+        <label for="classificationTypeSelect">Review With Template Type</label>
+        <select id="classificationTypeSelect"></select>
+      </div>
+
+      <div class="classification-evidence">
+        <div class="classification-label">Evidence</div>
+        <ul id="classificationEvidence"></ul>
+      </div>
+    </div>
+
+    <div class="classification-actions">
+      <button class="modal-btn" type="button" id="classificationCancelBtn">Return to Form</button>
+      <button class="modal-btn primary" type="button" id="classificationConfirmBtn">Analyse With This Type</button>
+    </div>
+  </section>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -1016,6 +1304,16 @@
   const fileName = document.getElementById('fileName');
   const fileClear = document.getElementById('fileClear');
   const submitBtn = document.getElementById('submitBtn');
+  const classificationModal = document.getElementById('classificationModal');
+  const classificationTypeSelect = document.getElementById('classificationTypeSelect');
+  const classificationDetectedType = document.getElementById('classificationDetectedType');
+  const classificationConfidence = document.getElementById('classificationConfidence');
+  const classificationConfidenceBar = document.getElementById('classificationConfidenceBar');
+  const classificationTemplate = document.getElementById('classificationTemplate');
+  const classificationSecondary = document.getElementById('classificationSecondary');
+  const classificationEvidence = document.getElementById('classificationEvidence');
+  const classificationCancelBtn = document.getElementById('classificationCancelBtn');
+  const classificationConfirmBtn = document.getElementById('classificationConfirmBtn');
 
   let currentFile = null;
 
@@ -1061,12 +1359,44 @@
   submitBtn.addEventListener('click', async () => {
     if (!currentFile) return;
 
-    const ctype = document.getElementById('contractType').value;
+    const selectedType = document.getElementById('contractType').value;
     const party = document.getElementById('counterparty').value || 'Not specified';
+    let contractText;
+    let finalContractType = selectedType;
+    let classification = null;
+
+    setSubmitState(true, selectedType === 'auto' ? 'Identifying Type...' : 'Reading Document...');
+
+    try {
+      contractText = await readFileAsText(currentFile);
+
+      if (selectedType === 'auto') {
+        classification = await classifyContractText(contractText);
+        const confirmedType = await showClassificationModal(classification);
+
+        if (!confirmedType) {
+          setSubmitState(false);
+          return;
+        }
+
+        finalContractType = confirmedType;
+        selectContractTypeValue(finalContractType);
+
+        if (finalContractType !== classification.primaryType) {
+          classification = null;
+        }
+      }
+    } catch (error) {
+      console.error("Initial contract processing failed:", error);
+      alert("Contract setup failed: " + error.message);
+      setSubmitState(false);
+      return;
+    }
 
     hero.style.display = 'none';
     analyzing.classList.add('shown');
     report.classList.remove('shown');
+    setSubmitState(true, 'Analysing...');
 
     // Animate steps
     for (let i = 0; i < steps.length; i++) {
@@ -1080,23 +1410,20 @@
     let result;
 
     try {
-      result = await callAzureFoundryAgent(currentFile, ctype);
+      result = await callAzureFoundryAgent(contractText, finalContractType, classification);
     } catch (error) {
       console.error("Azure call failed:", error);
       alert("Azure call failed: " + error.message);
 
-      analyzing.classList.remove('shown');
-      steps.forEach(s => s.classList.remove('done', 'active'));
-      hero.style.display = 'grid';
-
+      resetAnalyzeView();
+      setSubmitState(false);
       return;
     }
     // =========================
 
     // Populate metadata
     document.getElementById('docName').textContent = currentFile.name;
-    document.getElementById('docType').textContent =
-      ctype === 'auto' ? result.detectedType : ctype;
+    document.getElementById('docType').textContent = result.detectedType || finalContractType;
     document.getElementById('docClauses').textContent = formatClauseCount(result.clauseInventory);
     document.getElementById('docParty').textContent = party;
     document.getElementById('docGen').textContent =
@@ -1109,10 +1436,112 @@
     analyzing.classList.remove('shown');
     steps.forEach(s => s.classList.remove('done', 'active'));
     report.classList.add('shown');
+    setSubmitState(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function setSubmitState(isBusy, label) {
+    submitBtn.disabled = isBusy || !currentFile;
+    submitBtn.innerHTML = `${label || 'Analyse Contract'}<span class="arrow">→</span>`;
+  }
+
+  function resetAnalyzeView() {
+    analyzing.classList.remove('shown');
+    steps.forEach(s => s.classList.remove('done', 'active'));
+    hero.style.display = 'grid';
+  }
+
+  function selectContractTypeValue(contractType) {
+    const select = document.getElementById('contractType');
+    const option = Array.from(select.options).find(item => item.value === contractType);
+
+    if (option) {
+      select.value = contractType;
+    }
+  }
+
+  function populateClassificationTypeSelect() {
+    if (classificationTypeSelect.options.length > 0) return;
+
+    const mainSelect = document.getElementById('contractType');
+    Array.from(mainSelect.options)
+      .filter(option => option.value !== 'auto')
+      .forEach(option => {
+        const modalOption = document.createElement('option');
+        modalOption.textContent = option.textContent;
+        modalOption.value = option.value;
+        classificationTypeSelect.appendChild(modalOption);
+      });
+  }
+
+  function showClassificationModal(classification) {
+    populateClassificationTypeSelect();
+
+    const detectedType = classification.primaryType || 'Other / Unknown';
+    const confidence = typeof classification.confidence === 'number'
+      ? Math.max(0, Math.min(1, classification.confidence))
+      : null;
+    const secondaryTypes = Array.isArray(classification.secondaryTypes) && classification.secondaryTypes.length > 0
+      ? classification.secondaryTypes.join(', ')
+      : 'None';
+    const evidence = Array.isArray(classification.evidence) && classification.evidence.length > 0
+      ? classification.evidence.slice(0, 4)
+      : ['No evidence returned by the classifier.'];
+
+    classificationDetectedType.textContent = detectedType;
+    classificationConfidence.textContent = confidence === null
+      ? 'Not available'
+      : `${Math.round(confidence * 100)}%`;
+    classificationConfidenceBar.style.width = confidence === null
+      ? '0%'
+      : `${Math.round(confidence * 100)}%`;
+    classificationTemplate.textContent = classification.selectedTemplate || 'Not specified';
+    classificationSecondary.textContent = secondaryTypes;
+
+    classificationEvidence.innerHTML = '';
+    evidence.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      classificationEvidence.appendChild(li);
+    });
+
+    const detectedOption = Array.from(classificationTypeSelect.options)
+      .find(option => option.value === detectedType);
+    classificationTypeSelect.value = detectedOption
+      ? detectedType
+      : classificationTypeSelect.options[0]?.value || '';
+
+    classificationModal.hidden = false;
+    document.body.classList.add('modal-open');
+    classificationTypeSelect.focus();
+
+    return new Promise(resolve => {
+      let resolved = false;
+
+      const close = value => {
+        if (resolved) return;
+        resolved = true;
+        classificationModal.hidden = true;
+        document.body.classList.remove('modal-open');
+        classificationConfirmBtn.removeEventListener('click', confirm);
+        classificationCancelBtn.removeEventListener('click', cancel);
+        document.removeEventListener('keydown', onKeyDown);
+        resolve(value);
+      };
+
+      const confirm = () => close(classificationTypeSelect.value);
+      const cancel = () => close(null);
+      const onKeyDown = event => {
+        if (event.key === 'Escape') close(null);
+      };
+
+      classificationConfirmBtn.addEventListener('click', confirm);
+      classificationCancelBtn.addEventListener('click', cancel);
+      document.addEventListener('keydown', onKeyDown);
+    });
+  }
 
   function formatClauseCount(clauseInventory) {
     if (!clauseInventory) {
@@ -1314,17 +1743,34 @@
     return result.data.text.trim();
   }
 
-  async function callAzureFoundryAgent(file, contractType) {
-    const contractText = await readFileAsText(file);
+  async function classifyContractText(contractText) {
+    const response = await fetch("/api/classify-contract", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ contractText })
+    });
 
-    const response = await fetch("http://localhost:3000/api/review-contract", {
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Contract classification failed.");
+    }
+
+    return data.classification;
+  }
+
+  async function callAzureFoundryAgent(contractText, contractType, classification) {
+    const response = await fetch("/api/review-contract", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
         contractText,
-        contractType
+        contractType,
+        classification
       })
     });
 

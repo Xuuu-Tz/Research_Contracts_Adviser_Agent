@@ -51,7 +51,7 @@ Do not put real secrets in `.env.example`. The real key should only be stored in
 
 The app can optionally retrieve standard contract templates from an Azure AI Foundry Agent knowledge base before reviewing the uploaded contract.
 
-This is useful when your uploaded knowledge base includes files such as:
+The supported template-backed contract types are based on these 14 uploaded UoA standard template files:
 
 ```text
 UoA-CDA Two Way Template.docx
@@ -59,10 +59,20 @@ UoA-Data Access Agreement Agency Template (incoming) May 2024 (1).docx
 UoA-Data Access Agreement Template (outgoing) May 2024.docx
 UoA-Data Transfer Agreement Template (incoming) April 2024 .docx
 UoA-Data Transfer Agreement Template (outgoing) April 2024.docx
+UoA-MTA_Outbound for Key Materials-April 2018.docx
+UoA-Master Services Agreement Template (1).docx
 UoA-Material_Transfer_Agreement incoming-Aug 2024.docx
 UoA-Material_Transfer_Agreement_outgoing_Aug 2024.docx
+UoA-Provision of Services Agreement (Agency)_June 2024.docx
 UoA-Research Collaboration Agreement Template (1).docx
+UoA-Research Services Agreement (Agency) _June 2024 .docx
+UoA-Student Research Agreement Template (April 2018).docx
 UoA-Template Subcontractor Agreement_2025 (1) (1).docx
+```
+
+The review also retrieves this policy document when available:
+
+```text
 Contracting Positions - Approvals and Escalation Protocol_Final_Sept_25.pdf
 ```
 
@@ -104,6 +114,10 @@ Open the app in your browser:
 ```text
 http://localhost:3000
 ```
+
+## Review Flow
+
+If `Auto-detect from document` is selected, the app first classifies the contract and asks the user to confirm the detected type. The full review only starts after confirmation. If the detected type is wrong, cancel the confirmation dialog, choose the correct contract type from the dropdown, and run the review again.
 
 ## Project Structure
 
