@@ -20,6 +20,7 @@ This is a local demo app for reviewing research contracts. It provides a browser
   - Deployment name.
   - API version.
   - API key.
+- Optional: an Azure AI Foundry Agent with file search enabled and the UoA standard templates uploaded to its knowledge base.
 
 ## Setup
 
@@ -45,6 +46,44 @@ AZURE_OPENAI_API_KEY=your-azure-openai-key
 ```
 
 Do not put real secrets in `.env.example`. The real key should only be stored in `.env`.
+
+## Foundry Knowledge Base
+
+The app can optionally retrieve standard contract templates from an Azure AI Foundry Agent knowledge base before reviewing the uploaded contract.
+
+This is useful when your uploaded knowledge base includes files such as:
+
+```text
+UoA-CDA Two Way Template.docx
+UoA-Data Access Agreement Agency Template (incoming) May 2024 (1).docx
+UoA-Data Access Agreement Template (outgoing) May 2024.docx
+UoA-Data Transfer Agreement Template (incoming) April 2024 .docx
+UoA-Data Transfer Agreement Template (outgoing) April 2024.docx
+UoA-Material_Transfer_Agreement incoming-Aug 2024.docx
+UoA-Material_Transfer_Agreement_outgoing_Aug 2024.docx
+UoA-Research Collaboration Agreement Template (1).docx
+UoA-Template Subcontractor Agreement_2025 (1) (1).docx
+Contracting Positions - Approvals and Escalation Protocol_Final_Sept_25.pdf
+```
+
+To enable retrieval, add these values to `.env`:
+
+```bash
+FOUNDRY_PROJECT_ENDPOINT=https://your-foundry-resource.services.ai.azure.com/api/projects/your-project
+FOUNDRY_AGENT_NAME=your-agent-name
+FOUNDRY_AGENT_TOKEN=your-foundry-token
+FOUNDRY_KNOWLEDGE_REQUIRED=false
+```
+
+Get a temporary Foundry token with Azure CLI:
+
+```bash
+az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv
+```
+
+Paste the token into `FOUNDRY_AGENT_TOKEN`, then restart the server. These tokens expire, so refresh the token if Foundry retrieval starts returning authentication errors.
+
+If `FOUNDRY_KNOWLEDGE_REQUIRED=false`, the app falls back to the built-in prompt and mock position store when Foundry retrieval is not configured or fails. If set to `true`, the review fails fast when the knowledge base cannot be used.
 
 ## Run
 
@@ -84,7 +123,8 @@ http://localhost:3000
 - `server.js` reads environment variables from `.env` with `dotenv`.
 - `index.html` is served by the Express static file middleware.
 - The frontend calls the backend endpoint at `/api/review-contract`.
-- The backend then calls Azure OpenAI. The browser never needs direct access to the API key.
+- The backend classifies the contract, extracts clauses, optionally retrieves matching Foundry knowledge base context, and then calls Azure OpenAI for the review.
+- The browser never needs direct access to the API key or Foundry token.
 - OCR for scanned PDFs runs in the browser and may be slow. For demos, use short scanned PDFs when possible.
 
 ## Troubleshooting
@@ -114,6 +154,15 @@ Check that:
 - The endpoint matches the Azure resource that owns the key.
 - The deployment name is correct.
 - The API version is supported by the Azure OpenAI resource.
+
+### Foundry knowledge base retrieval is skipped
+
+Check that:
+
+- `FOUNDRY_PROJECT_ENDPOINT` points to the Foundry project endpoint, not only the Azure OpenAI resource endpoint.
+- `FOUNDRY_AGENT_NAME` matches the agent that has file search enabled.
+- `FOUNDRY_AGENT_TOKEN` is present and has not expired.
+- The server was restarted after editing `.env`.
 
 ## Security
 

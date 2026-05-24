@@ -171,6 +171,286 @@ function normalizeReviewResult(result, fallbackType) {
   return result;
 }
 
+const TEMPLATE_FILE_HINTS = {
+  "Confidential Disclosure Agreement": [
+    "UoA-CDA Two Way Template.docx"
+  ],
+  "Data Access Agreement": [
+    "UoA-Data Access Agreement Agency Template (incoming) May 2024 (1).docx",
+    "UoA-Data Access Agreement Template (outgoing) May 2024.docx"
+  ],
+  "Data Transfer Agreement": [
+    "UoA-Data Transfer Agreement Template (incoming) April 2024 .docx",
+    "UoA-Data Transfer Agreement Template (outgoing) April 2024.docx"
+  ],
+  "Material Transfer Agreement": [
+    "UoA-Material_Transfer_Agreement incoming-Aug 2024.docx",
+    "UoA-Material_Transfer_Agreement_outgoing_Aug 2024.docx",
+    "UoA-MTA_Outbound for Key Materials-April 2018.docx"
+  ],
+  "Research Services Agreement": [
+    "UoA-Research Services Agreement (Agency) _June 2024 .docx",
+    "UoA-Provision of Services Agreement (Agency)_June 2024.docx",
+    "UoA-Master Services Agreement Template (1).docx"
+  ],
+  "Research Contract": [
+    "Research_Contracts_Adviser_Agent.pdf"
+  ],
+  "Commercial Research Contract": [
+    "Research_Contracts_Adviser_Agent.pdf"
+  ],
+  "Public Research Contract": [
+    "Research_Contracts_Adviser_Agent.pdf"
+  ],
+  "Collaboration Agreement": [
+    "UoA-Research Collaboration Agreement Template (1).docx"
+  ],
+  "Research Subcontract": [
+    "UoA-Template Subcontractor Agreement_2025 (1) (1).docx"
+  ],
+  "Subcontract": [
+    "UoA-Template Subcontractor Agreement_2025 (1) (1).docx"
+  ],
+  "Student Research Agreement": [
+    "UoA-Student Research Agreement Template (April 2018).docx"
+  ]
+};
+
+const POLICY_FILE_HINTS = [
+  "Contracting Positions - Approvals and Escalation Protocol_Final_Sept_25.pdf",
+  "Research_Contracts_Adviser_Agent.pdf"
+];
+
+function normalizeFoundryProjectEndpoint(endpoint) {
+  let baseEndpoint = endpoint.replace(/\/+$/, "");
+
+  if (baseEndpoint.endsWith("/openai/v1")) {
+    baseEndpoint = baseEndpoint.slice(0, -"/openai/v1".length);
+  } else if (baseEndpoint.endsWith("/openai")) {
+    baseEndpoint = baseEndpoint.slice(0, -"/openai".length);
+  }
+
+  return baseEndpoint;
+}
+
+function getFoundryKnowledgeConfig() {
+  const projectEndpoint = process.env.FOUNDRY_PROJECT_ENDPOINT;
+  const agentName = process.env.FOUNDRY_AGENT_NAME;
+  const agentToken = process.env.FOUNDRY_AGENT_TOKEN;
+  const agentApiKey = process.env.FOUNDRY_AGENT_API_KEY;
+  const knowledgeRequired = process.env.FOUNDRY_KNOWLEDGE_REQUIRED === "true";
+
+  if (!projectEndpoint || !agentName || (!agentToken && !agentApiKey)) {
+    return {
+      enabled: false,
+      knowledgeRequired,
+      missing: [
+        !projectEndpoint ? "FOUNDRY_PROJECT_ENDPOINT" : null,
+        !agentName ? "FOUNDRY_AGENT_NAME" : null,
+        !agentToken && !agentApiKey ? "FOUNDRY_AGENT_TOKEN" : null
+      ].filter(Boolean)
+    };
+  }
+
+  return {
+    enabled: true,
+    knowledgeRequired,
+    projectEndpoint: normalizeFoundryProjectEndpoint(projectEndpoint),
+    agentName,
+    agentToken,
+    agentApiKey
+  };
+}
+
+function compactContractSignals(contractText, maxChars = 3000) {
+  return contractText.length > maxChars
+    ? `${contractText.slice(0, maxChars)}\n\n[Contract signal excerpt truncated.]`
+    : contractText;
+}
+
+function getTemplateFileHints(contractType, classification) {
+  const hints = new Set([
+    ...(TEMPLATE_FILE_HINTS[contractType] || []),
+    ...POLICY_FILE_HINTS
+  ]);
+
+  const selectedTemplate = classification?.selectedTemplate || "";
+  const selectedTemplateLower = selectedTemplate.toLowerCase();
+
+  if (selectedTemplateLower.includes("incoming")) {
+    for (const hint of TEMPLATE_FILE_HINTS[contractType] || []) {
+      if (hint.toLowerCase().includes("incoming")) hints.add(hint);
+    }
+  }
+
+  if (selectedTemplateLower.includes("outgoing") || selectedTemplateLower.includes("outbound")) {
+    for (const hint of TEMPLATE_FILE_HINTS[contractType] || []) {
+      if (hint.toLowerCase().includes("outgoing") || hint.toLowerCase().includes("outbound")) {
+        hints.add(hint);
+      }
+    }
+  }
+
+  return [...hints];
+}
+
+function buildKnowledgeBaseQuery({ contractText, contractType, classification }) {
+  const fileHints = getTemplateFileHints(contractType, classification);
+
+  return `
+Search the uploaded knowledge base for University of Auckland standard contract templates and contracting position documents relevant to this contract review.
+
+Contract type to search for:
+${contractType || "Other / Unknown"}
+
+Classifier-selected template:
+${classification?.selectedTemplate || "Not specified"}
+
+Prefer these uploaded file names when relevant:
+${fileHints.map(name => `- ${name}`).join("\n")}
+
+Also retrieve the contracting positions, approvals, and escalation protocol if relevant.
+
+Return a compact review context with:
+1. Source file names used.
+2. The most relevant template clauses or policy excerpts.
+3. Any incoming/outgoing or direction-specific template choice.
+4. Gaps where no matching uploaded knowledge base document was found.
+
+Only use the uploaded knowledge base. Do not invent template clauses.
+
+Contract signal excerpt for retrieval:
+${compactContractSignals(contractText)}
+`;
+}
+
+function collectResponseText(value, output = []) {
+  if (!value) return output;
+
+  if (typeof value === "string") {
+    output.push(value);
+    return output;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) collectResponseText(item, output);
+    return output;
+  }
+
+  if (typeof value === "object") {
+    if (typeof value.output_text === "string") output.push(value.output_text);
+    if (typeof value.text === "string") output.push(value.text);
+    if (typeof value.value === "string") output.push(value.value);
+    if (value.content) collectResponseText(value.content, output);
+    if (value.output) collectResponseText(value.output, output);
+  }
+
+  return output;
+}
+
+async function retrieveKnowledgeBaseContext({ contractText, contractType, classification }) {
+  const config = getFoundryKnowledgeConfig();
+
+  if (!config.enabled) {
+    const warning =
+      `Foundry knowledge base retrieval skipped. Missing: ${config.missing.join(", ")}.`;
+
+    if (config.knowledgeRequired) {
+      throw new Error(warning);
+    }
+
+    return {
+      enabled: false,
+      used: false,
+      warning,
+      context: ""
+    };
+  }
+
+  const query = buildKnowledgeBaseQuery({ contractText, contractType, classification });
+  const headers = {
+    "Content-Type": "application/json"
+  };
+
+  if (config.agentToken) {
+    headers.Authorization = `Bearer ${config.agentToken}`;
+  } else {
+    headers["api-key"] = config.agentApiKey;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+
+  try {
+    const response = await fetch(`${config.projectEndpoint}/openai/v1/responses`, {
+      method: "POST",
+      signal: controller.signal,
+      headers,
+      body: JSON.stringify({
+        agent: {
+          type: "agent_reference",
+          name: config.agentName
+        },
+        metadata: {
+          purpose: "contract_template_retrieval",
+          contractType: contractType || "Other / Unknown"
+        },
+        input: [
+          {
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: query
+              }
+            ]
+          }
+        ],
+        stream: false
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const error = new Error(data.error?.message || "Foundry knowledge base retrieval failed.");
+      error.status = response.status;
+      error.details = data;
+      throw error;
+    }
+
+    const context = collectResponseText(data).join("\n").trim();
+
+    return {
+      enabled: true,
+      used: Boolean(context),
+      query,
+      context,
+      raw: data
+    };
+  } catch (error) {
+    const message =
+      error.name === "AbortError"
+        ? "Foundry knowledge base retrieval timed out."
+        : error.message || "Foundry knowledge base retrieval failed.";
+
+    if (config.knowledgeRequired) {
+      throw error;
+    }
+
+    return {
+      enabled: true,
+      used: false,
+      warning: message,
+      details: error.details,
+      context: ""
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function classifyContractType(contractText) {
   const systemPrompt = `
 You are a research contract intake classifier for the University of Auckland Research Grants and Contracts team.
@@ -357,7 +637,11 @@ ${contractText}
   return parsed;
 }
 
-async function reviewContract(contractText, contractType, clauseInventory) {
+async function reviewContract(contractText, contractType, clauseInventory, knowledgeBaseRetrieval) {
+  const knowledgeContext = knowledgeBaseRetrieval?.used
+    ? knowledgeBaseRetrieval.context
+    : "No Foundry knowledge base context was retrieved for this run. Use only the mock position store below and clearly avoid claiming that specific uploaded template text was reviewed.";
+
   const systemPrompt = `
 You are a Research Contract Adviser Agent for a proof-of-concept system.
 
@@ -378,6 +662,14 @@ Use the selected or classified contract type as the starting point, then identif
 - Public Research Contract: public funder or grant terms position.
 - Commercial Research Contract: commercial sponsor research position.
 - If no clear match is found, use Other / Unknown and explain the uncertainty.
+
+When retrieved knowledge base context is provided, use it as the primary source for:
+- Template clause comparison.
+- Template names.
+- Contracting positions.
+- Required approvals and escalation.
+
+If retrieved knowledge base context is not provided, say so through conservative rationale and do not invent uploaded template content.
 
 Review every recognised top-level clause from the provided clause inventory where possible. Do not only report problematic clauses. If the inventory misses an obvious top-level clause, include it and explain that it was inferred from the contract text.
 
@@ -533,6 +825,9 @@ Selected contract type: ${contractType || "Hybrid or unclear"}
 Recognised top-level clause inventory:
 ${JSON.stringify(clauseInventory || { clauseCount: 0, clauses: [] }, null, 2)}
 
+Retrieved Foundry knowledge base context:
+${knowledgeContext}
+
 Use clause references from the recognised clause inventory where possible. Do not invent clause numbers.
 
 Please review this contract:
@@ -566,7 +861,17 @@ app.post("/api/review-contract", async (req, res) => {
     }
 
     const clauseInventory = await extractClauses(contractText, finalContractType);
-    const review = await reviewContract(contractText, finalContractType, clauseInventory);
+    const knowledgeBaseRetrieval = await retrieveKnowledgeBaseContext({
+      contractText,
+      contractType: finalContractType,
+      classification
+    });
+    const review = await reviewContract(
+      contractText,
+      finalContractType,
+      clauseInventory,
+      knowledgeBaseRetrieval
+    );
 
     if (classification) {
       review.classification = classification;
@@ -576,6 +881,12 @@ app.post("/api/review-contract", async (req, res) => {
     }
 
     review.clauseInventory = clauseInventory;
+    review.knowledgeBaseRetrieval = {
+      enabled: knowledgeBaseRetrieval.enabled,
+      used: knowledgeBaseRetrieval.used,
+      warning: knowledgeBaseRetrieval.warning,
+      query: knowledgeBaseRetrieval.query
+    };
 
     res.json(review);
   } catch (error) {
