@@ -55,8 +55,9 @@ function getAzureOpenAIConfig() {
   }
 
   const baseEndpoint = endpoint.replace(/\/+$/, "");
-  const url =
-    `${baseEndpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
+  const url = baseEndpoint.includes("/api/projects/") && baseEndpoint.endsWith("/openai")
+    ? `${baseEndpoint}/deployments/${deployment}/chat/completions?api-version=${apiVersion}`
+    : `${baseEndpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
 
   return { apiKey, url };
 }
@@ -103,6 +104,73 @@ function contractExcerpt(contractText, maxChars = 14000) {
     : contractText;
 }
 
+function normalizeReviewResult(result, fallbackType) {
+  if (!result || typeof result !== "object") {
+    throw new Error("Invalid JSON result from model.");
+  }
+
+  if (!Array.isArray(result.flags)) {
+    result.flags = [];
+  }
+
+  result.detectedType = result.detectedType || fallbackType || "Other / Unknown";
+  result.selectedTemplate = result.selectedTemplate || "Not specified";
+  result.knowledgeBaseDocuments = Array.isArray(result.knowledgeBaseDocuments)
+    ? result.knowledgeBaseDocuments
+    : [];
+
+  result.flags = result.flags.map((flag, index) => {
+    const severity = String(flag.severity || "blue").toLowerCase();
+
+    return {
+      severity: ["green", "amber", "red", "blue"].includes(severity) ? severity : "blue",
+      clauseRef: flag.clauseRef || `Clause ${index + 1}`,
+      title: flag.title || "Untitled Clause",
+      snippet: flag.snippet || "No snippet available.",
+      matchedPosition: flag.matchedPosition || "Not specified.",
+      rationale:
+        flag.rationale ||
+        "No issue identified. The clause does not appear to create a concern based on the available knowledge base.",
+      requiredEscalation: flag.requiredEscalation || "None",
+      confidence: flag.confidence || "Medium"
+    };
+  });
+
+  const counts = { green: 0, amber: 0, red: 0, blue: 0 };
+
+  for (const flag of result.flags) {
+    counts[flag.severity]++;
+  }
+
+  result.summary = result.summary || {};
+  result.summary.greenCount = counts.green;
+  result.summary.amberCount = counts.amber;
+  result.summary.redCount = counts.red;
+  result.summary.blueCount = counts.blue;
+
+  if (!result.summary.overallRisk) {
+    if (counts.red > 0) {
+      result.summary.overallRisk = "High";
+    } else if (counts.amber > 0 || counts.blue > 0) {
+      result.summary.overallRisk = "Medium";
+    } else {
+      result.summary.overallRisk = "Low";
+    }
+  }
+
+  if (!Array.isArray(result.summary.keyIssues)) {
+    result.summary.keyIssues = counts.red > 0
+      ? ["Red flag clauses require escalation before signing."]
+      : ["No major issues identified."];
+  }
+
+  result.disclaimer =
+    result.disclaimer ||
+    "This report is a decision-support tool only and requires review by the RGC Team. It does not constitute legal advice.";
+
+  return result;
+}
+
 async function classifyContractType(contractText) {
   const systemPrompt = `
 You are a research contract intake classifier for the University of Auckland Research Grants and Contracts team.
@@ -113,26 +181,39 @@ Choose exactly one primaryType from this list:
 - Public Research Contract
 - Commercial Research Contract
 - Subcontract
+- Research Contract
+- Research Subcontract
 - Material Transfer Agreement
 - Data Transfer Agreement
+- Data Access Agreement
 - Collaboration Agreement
 - Confidential Disclosure Agreement
+- Research Services Agreement
+- Student Research Agreement
 - Hybrid or unclear
+- Other / Unknown
 
-Use clause signals, not the file name. Look for:
-- Material Transfer Agreement: materials, samples, provider/recipient, permitted use, return or destruction of materials.
-- Data Transfer Agreement: datasets, personal information, data controller/processor, privacy, permitted data use, cross-border transfer.
-- Confidential Disclosure Agreement: confidential information, disclosure, recipient, non-use, non-disclosure, evaluation purpose.
-- Subcontract: prime agreement, flow-down terms, subcontractor, sponsor terms, work package under a main award.
-- Collaboration Agreement: joint research, shared responsibilities, steering committee, joint governance, shared outputs.
-- Commercial Research Contract: sponsor-funded research, deliverables, milestones, commercial rights, publication controls.
-- Public Research Contract: grant/funder terms, public funding, research outputs, institutional reporting obligations.
+Use clause signals, not the file name.
+
+Classification and UoA template mapping:
+- Material Transfer Agreement: transfer of biological/material samples, Original Materials, Provider, Recipient, Progeny, Modifications, or Commercial Purposes. Template: UoA MTA Incoming or UoA MTA Outbound depending on whether the University receives or provides the material.
+- Data Transfer Agreement: transfer of Data from a Provider to the University. Template: UoA Data Transfer Agreement Incoming.
+- Data Access Agreement: access to Data held by the University by another party, or access to Data held by a Provider by the University. Template: UoA Data Access Agreement Outgoing or UoA Data Access Agreement Incoming depending on direction.
+- Confidential Disclosure Agreement: mutual or one-way disclosure of Confidential Information. Template: UoA CDA Two Way Template where mutual.
+- Research Services Agreement: provision of research services by the University to a Client. Template: UoA Research Services Agreement.
+- Research Subcontract or Subcontract: subcontractor services under a funded research project, prime agreement, flow-down terms, sponsor terms, or work package under a main award. Template: UoA Subcontractor Agreement.
+- Student Research Agreement: Student, Client, and University for a student research project. Template: UoA Student Research Agreement.
+- Collaboration Agreement: joint research, shared responsibilities, steering committee, joint governance, or shared outputs.
+- Commercial Research Contract: sponsor-funded research, deliverables, milestones, commercial rights, or publication controls.
+- Public Research Contract: grant/funder terms, public funding, research outputs, or institutional reporting obligations.
+- If no clear match is found, classify it as Other / Unknown.
 
 Return ONLY valid JSON. Do not use markdown.
 
 Use this exact structure:
 {
   "primaryType": "Material Transfer Agreement",
+  "selectedTemplate": "UoA MTA Incoming",
   "confidence": 0.86,
   "secondaryTypes": ["Collaboration Agreement"],
   "evidence": [
@@ -163,16 +244,24 @@ ${contractExcerpt(contractText)}
     "Public Research Contract",
     "Commercial Research Contract",
     "Subcontract",
+    "Research Contract",
+    "Research Subcontract",
     "Material Transfer Agreement",
     "Data Transfer Agreement",
+    "Data Access Agreement",
     "Collaboration Agreement",
     "Confidential Disclosure Agreement",
-    "Hybrid or unclear"
+    "Research Services Agreement",
+    "Student Research Agreement",
+    "Hybrid or unclear",
+    "Other / Unknown"
   ]);
 
   if (!allowedTypes.has(parsed.primaryType)) {
-    parsed.primaryType = "Hybrid or unclear";
+    parsed.primaryType = "Other / Unknown";
   }
+
+  parsed.selectedTemplate = String(parsed.selectedTemplate || "Not specified").trim();
 
   if (typeof parsed.confidence !== "number") {
     parsed.confidence = 0;
@@ -270,13 +359,49 @@ ${contractText}
 
 async function reviewContract(contractText, contractType, clauseInventory) {
   const systemPrompt = `
-You are a Research Contract Reviewer Agent for the University of Auckland Research Grants and Contracts team.
+You are a Research Contract Adviser Agent for a proof-of-concept system.
 
-You must not provide legal advice.
-You must not approve or reject contracts.
-All final decisions must remain with human contract managers.
+Your task is to assist human contract reviewers by comparing uploaded research contracts against University of Auckland standard templates and preferred contracting positions in the knowledge base.
 
-Use the following UoA mock position store:
+You must not provide legal advice, approve contracts, reject contracts, or make final decisions. Your output is only a review aid for the RGC Team.
+
+Use the selected or classified contract type as the starting point, then identify the most relevant UoA standard template from this mapping:
+
+- Material Transfer Agreement: UoA MTA Incoming or UoA MTA Outbound depending on whether the University receives or provides the material.
+- Data Transfer Agreement: UoA Data Transfer Agreement Incoming.
+- Data Access Agreement: UoA Data Access Agreement Incoming or UoA Data Access Agreement Outgoing depending on data direction.
+- Confidential Disclosure Agreement: UoA CDA Two Way Template when mutual, otherwise the closest one-way CDA template.
+- Research Services Agreement: UoA Research Services Agreement.
+- Research Subcontract or Subcontract: UoA Subcontractor Agreement.
+- Student Research Agreement: UoA Student Research Agreement.
+- Collaboration Agreement: UoA collaboration template or closest collaboration position.
+- Public Research Contract: public funder or grant terms position.
+- Commercial Research Contract: commercial sponsor research position.
+- If no clear match is found, use Other / Unknown and explain the uncertainty.
+
+Review every recognised top-level clause from the provided clause inventory where possible. Do not only report problematic clauses. If the inventory misses an obvious top-level clause, include it and explain that it was inferred from the contract text.
+
+Review key clauses especially carefully, including:
+- Liability and exclusions
+- Indemnities
+- Insurance
+- Warranties
+- Confidentiality
+- Publication
+- Intellectual property and moral rights
+- Publicity
+- Payment terms
+- Governing law and jurisdiction
+- Dispute resolution
+- Termination
+- Variations and extensions
+- No disrepute clauses
+- Data access or data transfer
+- Material use restrictions
+- Commercial use restrictions
+- AI-generated outputs or AI tool usage
+
+Use the following UoA mock position store when assigning flags:
 
 1. Governing Law
 Rule strength: must
@@ -323,27 +448,78 @@ Rule strength: not_covered
 Position: No standard UoA position is currently available.
 Blue: Any AI-generated output clause should be escalated for human or legal review.
 
+For clauses not covered by this mock position store:
+- Use green only if there is clearly no issue identified based on the available knowledge base.
+- Use amber if contract manager review is sensible because wording is broad, unusual, or operationally important.
+- Use blue if no matching UoA position or template is available.
+- Do not invent UoA rules, template clauses, or legal requirements.
+
 Flag system:
-green = aligns with UoA position.
-amber = partially aligns but requires contract manager review.
-red = conflicts with UoA position and must be revised.
-blue = not covered by UoA positions.
+- green = aligns with UoA preferred position or standard template, or no issue is identified.
+- amber = partially aligns, falls within acceptable position, or requires contract manager review.
+- red = conflicts with UoA preferred position, creates significant risk, or requires escalation.
+- blue = not covered by current UoA positions or templates.
 
-Return ONLY valid JSON. Do not use markdown. Do not wrap the JSON in code fences.
+Important rules:
+- Every identifiable clause should appear in the final output.
+- If a clause has no issue, still include it as a Green Flag.
+- If a clause has no issue, the rationale must include: "No issue identified."
+- If no matching UoA position or template is found, use Blue Flag.
+- Use clause references from the recognised clause inventory where possible. Do not invent clause numbers.
+- If multiple templates appear relevant, choose the best match and explain the uncertainty in the rationale.
 
-Use this exact structure:
+For every clause, provide:
+- Clause number or title
+- Short clause snippet
+- Matched UoA position or template
+- Flag category
+- Rationale
+- Required escalation, if any
+- Confidence level: High / Medium / Low
+
+Return ONLY valid JSON.
+Do not include markdown.
+Do not include explanations outside the JSON.
+Do not wrap the JSON in code fences.
+
+Use this exact JSON structure:
+
 {
   "detectedType": "Material Transfer Agreement",
+  "selectedTemplate": "UoA MTA Incoming",
+  "knowledgeBaseDocuments": [
+    "Document name or section used"
+  ],
   "flags": [
     {
       "severity": "green",
       "clauseRef": "Clause 1",
-      "title": "Governing Law",
-      "snippet": "Short quote from the contract clause",
-      "rationale": "Reason for the flag and recommended next step"
+      "title": "Definitions",
+      "snippet": "Short quote from the uploaded contract",
+      "matchedPosition": "Relevant UoA position or template clause, or 'No specific issue identified based on available knowledge base.'",
+      "rationale": "No issue identified. The clause appears to align with the relevant UoA position or does not create a concern based on the available knowledge base.",
+      "requiredEscalation": "None",
+      "confidence": "High"
     }
-  ]
+  ],
+  "summary": {
+    "greenCount": 0,
+    "amberCount": 0,
+    "redCount": 0,
+    "blueCount": 0,
+    "overallRisk": "Low / Medium / High",
+    "keyIssues": [
+      "Brief summary of important issues, or 'No major issues identified.'"
+    ]
+  },
+  "disclaimer": "This report is a decision-support tool only and requires review by the RGC Team. It does not constitute legal advice."
 }
+
+Severity values must be exactly one of:
+- green
+- amber
+- red
+- blue
 `;
 
   const raw = await callAzureJsonChat({
@@ -366,20 +542,11 @@ ${contractText}
       }
     ],
     temperature: 0.2,
-    maxTokens: 2500
+    maxTokens: 4000
   });
 
   const parsed = parseModelJson(raw, "Model did not return valid review JSON.");
-
-  if (!parsed.flags || !Array.isArray(parsed.flags)) {
-    const error = new Error("Model JSON did not include a valid flags array.");
-    error.raw = parsed;
-    throw error;
-  }
-
-  parsed.detectedType = contractType || parsed.detectedType || "Hybrid or unclear";
-
-  return parsed;
+  return normalizeReviewResult(parsed, contractType);
 }
 
 app.post("/api/review-contract", async (req, res) => {
@@ -403,6 +570,9 @@ app.post("/api/review-contract", async (req, res) => {
 
     if (classification) {
       review.classification = classification;
+      if (review.selectedTemplate === "Not specified" && classification.selectedTemplate) {
+        review.selectedTemplate = classification.selectedTemplate;
+      }
     }
 
     review.clauseInventory = clauseInventory;
