@@ -129,11 +129,22 @@ function confidenceLabelFromClause(clause) {
     : "Low";
 }
 
+function cleanSnippet(value, maxChars = 260) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+
+  if (!text) {
+    return "";
+  }
+
+  return text.length > maxChars ? `${text.slice(0, maxChars).trim()}...` : text;
+}
+
 function buildExpectedClauseCoverage(clauseInventory) {
   const clauses = Array.isArray(clauseInventory?.clauses)
     ? clauseInventory.clauses.map(clause => ({
         clauseRef: String(clause.clauseRef || "").trim() || "Unnumbered",
         heading: String(clause.heading || "Unreviewed Clause").trim(),
+        snippet: cleanSnippet(clause.snippet || clause.text || clause.clauseText),
         confidence: typeof clause.confidence === "number" ? clause.confidence : 0
       }))
     : [];
@@ -186,12 +197,16 @@ function createBlueCoverageFlag(clause) {
   return {
     severity: "blue",
     clauseRef: clause.clauseRef,
-    title: clause.heading || "Unreviewed Clause",
-    snippet: "No snippet returned by the automated review.",
-    matchedPosition: "No model finding returned for this recognised top-level clause.",
+    title: clause.heading || "Clause requiring manual review",
+    snippet:
+      cleanSnippet(clause.snippet) ||
+      "This recognised clause requires manual review because no matching UoA position or template was identified.",
+    sourceDocument: "No matching UoA position or template found in the available knowledge base.",
+    matchedPosition: "No matching UoA position or template found for this clause.",
     rationale:
-      "The automated review did not return a finding for this recognised top-level clause. Treat it as not covered by the current automated analysis and review it manually.",
+      "No matching UoA position or template was identified for this clause in the available knowledge base. Treat this as a Blue flag for Contract Manager review rather than as an automated approval.",
     requiredEscalation: "Contract Manager review",
+    suggestedAction: "Manually assess this clause and decide whether a UoA position, template comparison, or amendment is required.",
     confidence: confidenceLabelFromClause(clause)
   };
 }
@@ -233,7 +248,7 @@ function addMissingClauseCoverage(result, clauseInventory) {
 
     result.flags.push(createBlueCoverageFlag({
       clauseRef: `Unreviewed clause ${placeholderNumber}`,
-      heading: "Recognised clause missing from automated review",
+      heading: "Clause requiring manual coverage review",
       confidence: 0
     }));
     addedBlueFlags++;
@@ -263,17 +278,45 @@ function normalizeReviewResult(result, fallbackType, clauseInventory) {
 
   result.flags = result.flags.map((flag, index) => {
     const severity = String(flag.severity || "blue").toLowerCase();
+    const normalizedSeverity = ["green", "amber", "red", "blue"].includes(severity) ? severity : "blue";
+    const sourceDocument =
+      flag.sourceDocument || result.selectedTemplate || "Relevant UoA template or position document";
+    let matchedPosition = flag.matchedPosition || "Not specified.";
+
+    if (/no specific issue identified based on available knowledge base/i.test(matchedPosition)) {
+      if (normalizedSeverity === "green") {
+        matchedPosition = `No issue identified after comparison with ${sourceDocument}.`;
+      } else if (normalizedSeverity === "amber") {
+        matchedPosition = `Requires Contract Manager review against ${sourceDocument}.`;
+      } else if (normalizedSeverity === "red") {
+        matchedPosition = `Conflicts with a UoA position or template expectation in ${sourceDocument}.`;
+      } else {
+        matchedPosition = "No matching UoA position or template was found in the available knowledge base.";
+      }
+    }
+
+    const suggestedAction =
+      flag.suggestedAction ||
+      (normalizedSeverity === "green"
+        ? "No amendment required; retain for normal human review."
+        : normalizedSeverity === "amber"
+          ? "Contract Manager should review the wording and confirm acceptability."
+          : normalizedSeverity === "red"
+            ? "Escalate and seek amendment before signing."
+            : "Manual review required because no matching UoA position or template was found.");
 
     return {
-      severity: ["green", "amber", "red", "blue"].includes(severity) ? severity : "blue",
+      severity: normalizedSeverity,
       clauseRef: flag.clauseRef || `Clause ${index + 1}`,
       title: flag.title || "Untitled Clause",
       snippet: flag.snippet || "No snippet available.",
-      matchedPosition: flag.matchedPosition || "Not specified.",
+      sourceDocument,
+      matchedPosition,
       rationale:
         flag.rationale ||
         "No issue identified. The clause does not appear to create a concern based on the available knowledge base.",
       requiredEscalation: flag.requiredEscalation || "None",
+      suggestedAction,
       confidence: flag.confidence || "Medium"
     };
   });
@@ -308,7 +351,7 @@ function normalizeReviewResult(result, fallbackType, clauseInventory) {
 
   if (result.coverage?.addedBlueFlags > 0) {
     result.summary.keyIssues.push(
-      `${result.coverage.addedBlueFlags} recognised clause(s) were not returned by the model and were marked blue for manual review.`
+      `${result.coverage.addedBlueFlags} recognised clause(s) were marked blue because no automated match to a UoA position or template was available.`
     );
   }
 
@@ -685,6 +728,7 @@ Rules:
 - Do not count schedules, appendices, signature blocks, cover pages, tables of contents, party details, recitals, or definitions entries as top-level clauses unless they are explicitly numbered as main clauses.
 - Preserve the clause numbering used by the contract, for example "1", "2", "Clause 3", or "section 4".
 - If a heading is missing, infer a short descriptive heading from the clause text.
+- For each clause, include a short snippet copied from the clause text, preferably the first meaningful sentence or phrase.
 - If the document text extraction appears incomplete, set extractionWarnings.
 
 Return ONLY valid JSON. Do not use markdown.
@@ -696,6 +740,7 @@ Use this exact structure:
     {
       "clauseRef": "1",
       "heading": "Definitions",
+      "snippet": "Short quote from the clause text",
       "confidence": 0.95
     }
   ],
@@ -732,6 +777,7 @@ ${contractText}
     .map(clause => ({
       clauseRef: String(clause.clauseRef || "").trim() || "Unnumbered",
       heading: String(clause.heading || "Untitled clause").trim(),
+      snippet: cleanSnippet(clause.snippet || clause.text || clause.clauseText),
       confidence: typeof clause.confidence === "number" ? clause.confidence : 0
     }));
 
@@ -876,6 +922,13 @@ Important rules:
 - Use clause references from the recognised clause inventory where possible. Do not invent clause numbers.
 - If multiple templates appear relevant, choose the best match and explain the uncertainty in the rationale.
 
+Output quality rules:
+- For Green flags, matchedPosition must identify the relevant UoA template, clause topic, or position used for comparison. Do not write only "No specific issue identified based on available knowledge base."
+- For Amber and Red flags, matchedPosition must never be "No specific issue identified based on available knowledge base." It must state the UoA position, template expectation, or contracting rule that is being partially met or breached.
+- For Amber and Red flags, suggestedAction is required and must give a practical next step for the Contract Manager.
+- For Blue flags, suggestedAction must say that manual review is required because no matching UoA position or template was found.
+- sourceDocument must name the most relevant UoA template or contracting position document used for the clause.
+
 For every clause, provide:
 - Clause number or title
 - Short clause snippet
@@ -883,6 +936,8 @@ For every clause, provide:
 - Flag category
 - Rationale
 - Required escalation, if any
+- Suggested action
+- Source document used
 - Confidence level: High / Medium / Low
 
 Return ONLY valid JSON.
@@ -904,9 +959,11 @@ Use this exact JSON structure:
       "clauseRef": "Clause 1",
       "title": "Definitions",
       "snippet": "Short quote from the uploaded contract",
-      "matchedPosition": "Relevant UoA position or template clause, or 'No specific issue identified based on available knowledge base.'",
+      "sourceDocument": "Relevant UoA template or contracting position document name",
+      "matchedPosition": "Specific UoA position, template expectation, or clause topic used for comparison",
       "rationale": "No issue identified. The clause appears to align with the relevant UoA position or does not create a concern based on the available knowledge base.",
       "requiredEscalation": "None",
+      "suggestedAction": "No amendment required; retain for normal human review.",
       "confidence": "High"
     }
   ],

@@ -1022,25 +1022,26 @@
     .modal-btn { width: 100%; }
     .footer { margin: 40px 24px 0; flex-direction: column; gap: 10px; }
   }
+
   @media print {
-  .actions-bar {
-    display: none !important;
-  }
+    .actions-bar {
+      display: none !important;
+    }
 
-  .clause-body {
-    max-height: none !important;
-    overflow: visible !important;
-  }
+    .clause-body {
+      max-height: none !important;
+      overflow: visible !important;
+    }
 
-  .clause-toggle {
-    display: none !important;
-  }
+    .clause-toggle {
+      display: none !important;
+    }
 
-  .clause {
-    break-inside: avoid;
-    page-break-inside: avoid;
+    .clause {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
   }
-}
 </style>
 </head>
 <body>
@@ -1585,22 +1586,19 @@
       : `${clauseCount} ${suffix}${source}`;
   }
 
-  /* ============ 安全转义函数 ============ */
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
 
-function displayValue(value, fallback = 'Not specified') {
-  const text = String(value ?? '').trim();
-  return text.length > 0 ? escapeHtml(text) : fallback;
-}
-
-  
+  function displayValue(value, fallback = 'Not specified') {
+    const text = String(value ?? '').trim();
+    return text.length > 0 ? escapeHtml(text) : fallback;
+  }
   /* ============ RENDER REPORT ============ */
   function renderReport(data) {
     const groups = { green: [], amber: [], red: [], blue: [] };
@@ -1632,15 +1630,31 @@ function displayValue(value, fallback = 'Not specified') {
         el.innerHTML = `
           <div class="clause-stripe"></div>
           <div class="clause-header">
-            <div class="clause-num">${f.clauseRef}</div>
-            <div class="clause-title">${f.title}</div>
+            <div class="clause-num">${displayValue(f.clauseRef, 'Unnumbered')}</div>
+            <div class="clause-title">${displayValue(f.title, 'Untitled clause')}</div>
             <div class="clause-toggle">+</div>
           </div>
           <div class="clause-body">
             <div class="clause-body-inner">
-              <div class="snippet"><span>${f.snippet}</span></div>
+              <div class="snippet"><span>${displayValue(f.snippet, 'No snippet available.')}</span></div>
+
+              <div class="rationale-label">Source Document</div>
+              <div class="rationale">${displayValue(f.sourceDocument || data.selectedTemplate, 'Not specified')}</div>
+
+              <div class="rationale-label">Matched UoA Position / Template</div>
+              <div class="rationale">${displayValue(f.matchedPosition)}</div>
+
               <div class="rationale-label">Rationale</div>
-              <div class="rationale">${f.rationale}</div>
+              <div class="rationale">${displayValue(f.rationale, 'No rationale provided.')}</div>
+
+              <div class="rationale-label">Required Escalation</div>
+              <div class="rationale">${displayValue(f.requiredEscalation, 'None')}</div>
+
+              <div class="rationale-label">Suggested Action</div>
+              <div class="rationale">${displayValue(f.suggestedAction, 'Human review required.')}</div>
+
+              <div class="rationale-label">Confidence</div>
+              <div class="rationale">${displayValue(f.confidence, 'Medium')}</div>
             </div>
           </div>
         `;
@@ -1657,6 +1671,8 @@ function displayValue(value, fallback = 'Not specified') {
   document.getElementById('newReviewBtn').addEventListener('click', () => {
     report.classList.remove('shown');
     hero.style.display = 'grid';
+    document.getElementById('contractType').value = 'auto';
+    document.getElementById('counterparty').value = '';
     setFile(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
