@@ -1022,6 +1022,25 @@
     .modal-btn { width: 100%; }
     .footer { margin: 40px 24px 0; flex-direction: column; gap: 10px; }
   }
+  @media print {
+  .actions-bar {
+    display: none !important;
+  }
+
+  .clause-body {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .clause-toggle {
+    display: none !important;
+  }
+
+  .clause {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
 </style>
 </head>
 <body>
