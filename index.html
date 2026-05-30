@@ -914,6 +914,39 @@
   }
 
   .rationale strong { font-weight: 600; }
+  
+  .requirement-box {
+  background: var(--paper);
+  border-left: 4px solid var(--ink);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.requirement-line strong {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.requirement-line span {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  margin-left: 6px;
+}
+
+.rationale-box {
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--paper-deep);
+  padding: 14px 18px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.rationale-box strong {
+  font-weight: 700;
+}
 
   /* Empty section */
   .empty-section {
@@ -1567,6 +1600,8 @@
   }
 
   /* ============ RENDER REPORT ============ */
+
+
   function renderReport(data) {
     const groups = { green: [], amber: [], red: [], blue: [] };
     data.flags.forEach(f => groups[f.severity].push(f));
@@ -1596,18 +1631,27 @@
         el.className = 'clause ' + sev;
         el.innerHTML = `
           <div class="clause-stripe"></div>
-          <div class="clause-header">
-            <div class="clause-num">${f.clauseRef}</div>
-            <div class="clause-title">${f.title}</div>
-            <div class="clause-toggle">+</div>
-          </div>
-          <div class="clause-body">
-            <div class="clause-body-inner">
-              <div class="snippet"><span>${f.snippet}</span></div>
-              <div class="rationale-label">Rationale</div>
-              <div class="rationale">${f.rationale}</div>
-            </div>
-          </div>
+  <div class="clause-header">
+    <div class="clause-num">${f.clauseRef}</div>
+    <div class="clause-title">${f.title}</div>
+    <div class="clause-toggle">+</div>
+  </div>
+
+  <div class="clause-body">
+    <div class="clause-body-inner">
+      <div class="requirement-box">
+        <div class="requirement-line">
+          <strong>Clause [${f.clauseRef} / ${f.title}]:</strong>
+          <span>“${f.snippet}”</span>
+        </div>
+      </div>
+
+      <div class="rationale-box">
+        <strong>Rationale:</strong>
+        <span>${f.rationale}</span>
+      </div>
+    </div>
+  </div>
         `;
         const header = el.querySelector('.clause-header');
         header.addEventListener('click', () => el.classList.toggle('open'));

@@ -86,6 +86,7 @@ async function callAzureJsonChat({ messages, temperature = 0.2, maxTokens = 2000
     });
 
     const data = await response.json();
+    console.log(data)
 
     if (!response.ok) {
       const error = new Error(data.error?.message || "Azure OpenAI request failed.");
@@ -272,7 +273,7 @@ function normalizeReviewResult(result, fallbackType, clauseInventory) {
       matchedPosition: flag.matchedPosition || "Not specified.",
       rationale:
         flag.rationale ||
-        "No issue identified. The clause does not appear to create a concern based on the available knowledge base.",
+        "Aligns because the clause does not appear to create a concern based on the available knowledge base.",
       requiredEscalation: flag.requiredEscalation || "None",
       confidence: flag.confidence || "Medium"
     };
@@ -870,7 +871,10 @@ Important rules:
 - Every identifiable clause should appear in the final output.
 - The flags array must contain one item for every recognised top-level clause in the clause inventory.
 - If a clause has no issue, still include it as a Green Flag.
-- If a clause has no issue, the rationale must include: "No issue identified."
+- If a clause has no issue, still include it as a Green Flag.
+- For Green flags, the rationale must start with: "Aligns because ..."
+- Do not write "No issue identified."
+- Do not write "The clause appears to align."
 - If no matching UoA position or template is found, use Blue Flag.
 - If you cannot review a recognised clause using the available knowledge base, include that clause as a Blue Flag instead of omitting it.
 - Use clause references from the recognised clause inventory where possible. Do not invent clause numbers.
@@ -884,6 +888,16 @@ For every clause, provide:
 - Rationale
 - Required escalation, if any
 - Confidence level: High / Medium / Low
+
+Rationale wording rules:
+- Green rationale must start with: "Aligns because ..."
+- Amber rationale must start with: "Partial alignment; deviation because ..."
+- Red rationale must start with: "Conflicts with standard because ..."
+- Blue rationale must start with: "Not addressed in current standards because ..."
+- Do not include the label "Rationale:" inside the rationale field.
+- Do not write "No issue identified."
+- Do not write "The clause appears to align."
+- The rationale must be one complete natural sentence.
 
 Return ONLY valid JSON.
 Do not include markdown.
@@ -905,7 +919,7 @@ Use this exact JSON structure:
       "title": "Definitions",
       "snippet": "Short quote from the uploaded contract",
       "matchedPosition": "Relevant UoA position or template clause, or 'No specific issue identified based on available knowledge base.'",
-      "rationale": "No issue identified. The clause appears to align with the relevant UoA position or does not create a concern based on the available knowledge base.",
+      "rationale": "Aligns because the clause is consistent with the relevant UoA position or template and does not create a concern based on the available knowledge base.",
       "requiredEscalation": "None",
       "confidence": "High"
     }
