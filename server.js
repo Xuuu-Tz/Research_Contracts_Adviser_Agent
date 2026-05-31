@@ -86,7 +86,6 @@ async function callAzureJsonChat({ messages, temperature = 0.2, maxTokens = 2000
     });
 
     const data = await response.json();
-    console.log(data)
 
     if (!response.ok) {
       const error = new Error(data.error?.message || "Azure OpenAI request failed.");
