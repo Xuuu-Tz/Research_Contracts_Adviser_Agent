@@ -86,6 +86,7 @@ async function callAzureJsonChat({ messages, temperature = 0.2, maxTokens = 2000
     });
 
     const data = await response.json();
+    console.log(data)
 
     if (!response.ok) {
       const error = new Error(data.error?.message || "Azure OpenAI request failed.");
@@ -863,7 +864,7 @@ For clauses not covered by this mock position store:
 Flag system:
 - green = aligns with UoA preferred position or standard template, or no issue is identified.
 - amber = partially aligns, falls within acceptable position, or requires contract manager review.
-- red = conflicts with UoA preferred position, creates significant risk, or requires escalation.
+- red = conflicts with UoA preferred position, creates significant risk, violates a required UoA rule, or requires escalation.
 - blue = not covered by current UoA positions or templates.
 
 Important rules:
@@ -878,8 +879,25 @@ Important rules:
 - If you cannot review a recognised clause using the available knowledge base, include that clause as a Blue Flag instead of omitting it.
 - Use clause references from the recognised clause inventory where possible. Do not invent clause numbers.
 - If multiple templates appear relevant, choose the best match and explain the uncertainty in the rationale.
+- For every Red Flag, the matchedPosition field must contain the exact UoA rule, prohibition, or template requirement that is being violated.
 
-For every clause, provide:
+- For every Red Flag, the rationale must start with this exact phrase:
+  "Conflicts with standard"
+
+- For every Red Flag, use this rationale format:
+  "Conflicts with standard '[specific UoA rule/prohibition]'. The uploaded clause states '[short contract wording]', which conflicts because [clear reason]."
+
+- Do not use vague wording such as:
+  "conflicts with UoA position"
+  "not acceptable"
+  "requires review"
+  unless you also state the specific rule being violated.
+
+- Example:
+  matchedPosition: "Preferred Contracting Position: New Zealand law. Acceptable Contracting Position: Foreign governing law only with prior approval or legal review."
+  rationale: "Conflicts with standard 'Governing law should be New Zealand law unless an approved exception applies'. The uploaded clause states 'This Agreement shall be construed in accordance with the laws of Australia', which conflicts because it applies Australian law without showing any approved exception."
+  
+  For every clause, provide:
 - Clause number or title
 - Short clause snippet
 - Matched UoA position or template
@@ -917,7 +935,7 @@ Use this exact JSON structure:
       "clauseRef": "Clause 1",
       "title": "Definitions",
       "snippet": "Short quote from the uploaded contract",
-      "matchedPosition": "Relevant UoA position or template clause, or 'No specific issue identified based on available knowledge base.'",
+      "matchedPosition": "For Red Flags, include Preferred Contracting Position, Acceptable Contracting Position, and Required Escalation where available. For non-Red Flags, include the relevant UoA position or template clause.",
       "rationale": "Aligns because the clause is consistent with the relevant UoA position or template and does not create a concern based on the available knowledge base.",
       "requiredEscalation": "None",
       "confidence": "High"

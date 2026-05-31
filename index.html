@@ -1630,29 +1630,48 @@
         const el = document.createElement('article');
         el.className = 'clause ' + sev;
         el.innerHTML = `
-          <div class="clause-stripe"></div>
-  <div class="clause-header">
-    <div class="clause-num">${f.clauseRef}</div>
-    <div class="clause-title">${f.title}</div>
-    <div class="clause-toggle">+</div>
-  </div>
+      <div class="clause-stripe"></div>
+      <div class="clause-header">
+        <div class="clause-num">${f.clauseRef || 'Clause'}</div>
+        <div class="clause-title">${f.title || 'Untitled Clause'}</div>
+        <div class="clause-toggle">+</div>
+      </div>
 
-  <div class="clause-body">
-    <div class="clause-body-inner">
-      <div class="requirement-box">
-        <div class="requirement-line">
-          <strong>Clause [${f.clauseRef} / ${f.title}]:</strong>
-          <span>“${f.snippet}”</span>
+      <div class="clause-body">
+        <div class="clause-body-inner">
+          <div class="snippet">
+            <span>${f.snippet || 'No snippet available.'}</span>
+          </div>
+
+          ${
+            sev === 'red'
+              ? `
+                <div class="rationale-label">Conflicting UoA Rule / Prohibition</div>
+                <div class="rationale">
+                  ${f.matchedPosition || 'No specific UoA rule identified.'}
+                </div>
+              `
+              : ''
+          }
+
+          <div class="rationale-label" style="${sev === 'red' ? 'margin-top:12px;' : ''}">Rationale</div>
+          <div class="rationale">
+            ${f.rationale || 'No issue identified.'}
+          </div>
+
+          ${
+            sev === 'red'
+              ? `
+                <div class="rationale-label" style="margin-top:12px;">Required Escalation</div>
+                <div class="rationale">
+                  ${f.requiredEscalation || 'Contract Manager / Legal Team'}
+                </div>
+              `
+              : ''
+          }
         </div>
       </div>
-
-      <div class="rationale-box">
-        <strong>Rationale:</strong>
-        <span>${f.rationale}</span>
-      </div>
-    </div>
-  </div>
-        `;
+    `;
         const header = el.querySelector('.clause-header');
         header.addEventListener('click', () => el.classList.toggle('open'));
         // open the first one in each category by default for visibility
