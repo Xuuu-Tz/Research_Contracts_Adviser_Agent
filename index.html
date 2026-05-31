@@ -591,6 +591,35 @@
     margin-bottom: 28px;
   }
 
+  .progress-wrap {
+    max-width: 520px;
+    margin: 0 auto 28px;
+  }
+
+  .progress-track {
+    width: 100%;
+    height: 10px;
+    border: 1px solid var(--ink);
+    background: rgba(255, 255, 255, 0.35);
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    width: 0%;
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.35s ease;
+  }
+
+  .progress-text {
+    margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
   .analyzing-steps {
     max-width: 480px;
     margin: 0 auto;
@@ -1030,6 +1059,24 @@
   .action-btn.primary { background: var(--ink); color: var(--paper); }
   .action-btn.primary:hover { background: var(--accent); border-color: var(--accent); }
 
+  @media print {
+    .actions-bar,
+    .clause-toggle {
+      display: none !important;
+    }
+
+    .clause {
+      break-inside: avoid;
+      page-break-inside: avoid;
+      overflow: visible !important;
+    }
+
+    .clause-body {
+      max-height: none !important;
+      overflow: visible !important;
+    }
+  }
+
   /* ============ RESPONSIVE ============ */
   @media (max-width: 900px) {
     .masthead { padding: 14px 24px 10px; grid-template-columns: 1fr; text-align: center; }
@@ -1162,6 +1209,13 @@
   <!-- ============ ANALYZING ============ -->
   <section class="analyzing" id="analyzing">
     <p class="analyzing-title">Reading the document…</p>
+
+    <div class="progress-wrap" aria-label="Analysis progress">
+      <div class="progress-track">
+        <div class="progress-fill" id="analysisProgressFill"></div>
+      </div>
+      <div class="progress-text" id="analysisProgressText">Preparing analysis... 0%</div>
+    </div>
     <div class="analyzing-steps">
       <div class="step" data-step="0"><span class="step-num"><span class="step-num-text">1</span></span><span>Extracting clauses</span></div>
       <div class="step" data-step="1"><span class="step-num"><span class="step-num-text">2</span></span><span>Identifying contract type</span></div>
@@ -1189,7 +1243,7 @@
     </header>
 
     <div class="actions-bar">
-      <button class="action-btn primary" onclick="window.print()">Export PDF</button>
+      <button class="action-btn primary" id="exportPdfBtn">Export PDF</button>
       <button class="action-btn" id="newReviewBtn">New Review</button>
       <button class="action-btn" id="expandAllBtn">Expand All</button>
     </div>
@@ -1388,6 +1442,39 @@
   const analyzing = document.getElementById('analyzing');
   const report = document.getElementById('report');
   const steps = document.querySelectorAll('.step');
+  const progressFill = document.getElementById('analysisProgressFill');
+  const progressText = document.getElementById('analysisProgressText');
+
+  function setAnalysisProgress(percent, label) {
+    const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
+    if (progressFill) progressFill.style.width = `${safePercent}%`;
+    if (progressText) progressText.textContent = `${label} ${safePercent}%`;
+  }
+
+  function setStepState(index, state) {
+    const step = steps[index];
+    if (!step) return;
+    step.classList.remove('active', 'done');
+    if (state) step.classList.add(state);
+  }
+
+  function resetAnalysisProgress() {
+    setAnalysisProgress(0, 'Preparing analysis...');
+    steps.forEach(s => s.classList.remove('done', 'active'));
+  }
+
+  function startWaitingProgress() {
+    let progress = 60;
+    setAnalysisProgress(progress, 'Comparing clauses with UoA positions...');
+
+    return setInterval(() => {
+      if (progress < 92) {
+        progress += 2;
+        setAnalysisProgress(progress, 'Analysing contract clauses...');
+      }
+    }, 900);
+  }
+
 
   submitBtn.addEventListener('click', async () => {
     if (!currentFile) return;
@@ -1398,13 +1485,17 @@
     let finalContractType = selectedType;
     let classification = null;
 
+    resetAnalysisProgress();
     setSubmitState(true, selectedType === 'auto' ? 'Identifying Type...' : 'Reading Document...');
 
     try {
       contractText = await readFileAsText(currentFile);
+      setAnalysisProgress(20, 'Document extracted...');
 
       if (selectedType === 'auto') {
+        setAnalysisProgress(30, 'Identifying contract type...');
         classification = await classifyContractText(contractText);
+        setAnalysisProgress(45, 'Contract type identified...');
         const confirmedType = await showClassificationModal(classification);
 
         if (!confirmedType) {
@@ -1431,20 +1522,29 @@
     report.classList.remove('shown');
     setSubmitState(true, 'Analysing...');
 
-    // Animate steps
-    for (let i = 0; i < steps.length; i++) {
-      steps[i].classList.add('active');
-      await sleep(700);
-      steps[i].classList.remove('active');
-      steps[i].classList.add('done');
-    }
+    resetAnalysisProgress();
+    setAnalysisProgress(50, 'Starting clause review...');
+    setStepState(0, 'done');
+    setStepState(1, 'done');
+    setStepState(2, 'active');
 
     // === AZURE OPENAI CALL ===
     let result;
+    let progressTimer;
 
     try {
+      progressTimer = startWaitingProgress();
       result = await callAzureFoundryAgent(contractText, finalContractType, classification);
+      clearInterval(progressTimer);
+      setStepState(2, 'done');
+      setStepState(3, 'done');
+      setStepState(4, 'active');
+      setAnalysisProgress(95, 'Compiling adviser report...');
+      await sleep(300);
+      setStepState(4, 'done');
+      setAnalysisProgress(100, 'Report ready...');
     } catch (error) {
+      if (progressTimer) clearInterval(progressTimer);
       console.error("Azure call failed:", error);
       alert("Azure call failed: " + error.message);
 
@@ -1467,7 +1567,7 @@
 
     await sleep(400);
     analyzing.classList.remove('shown');
-    steps.forEach(s => s.classList.remove('done', 'active'));
+    resetAnalysisProgress();
     report.classList.add('shown');
     setSubmitState(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1482,7 +1582,7 @@
 
   function resetAnalyzeView() {
     analyzing.classList.remove('shown');
-    steps.forEach(s => s.classList.remove('done', 'active'));
+    resetAnalysisProgress();
     hero.style.display = 'grid';
   }
 
@@ -1689,11 +1789,24 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
+  function expandAllClauses() {
+    document.querySelectorAll('.clause').forEach(c => c.classList.add('open'));
+    const expandAllBtn = document.getElementById('expandAllBtn');
+    if (expandAllBtn) expandAllBtn.textContent = 'Collapse All';
+  }
+
+  document.getElementById('exportPdfBtn').addEventListener('click', () => {
+    expandAllClauses();
+    requestAnimationFrame(() => window.print());
+  });
+
+  window.addEventListener('beforeprint', expandAllClauses);
+
   document.getElementById('expandAllBtn').addEventListener('click', (e) => {
     const all = document.querySelectorAll('.clause');
-    const anyOpen = Array.from(all).some(c => c.classList.contains('open'));
-    all.forEach(c => c.classList.toggle('open', !anyOpen));
-    e.target.textContent = anyOpen ? 'Expand All' : 'Collapse All';
+    const anyClosed = Array.from(all).some(c => !c.classList.contains('open'));
+    all.forEach(c => c.classList.toggle('open', anyClosed));
+    e.target.textContent = anyClosed ? 'Collapse All' : 'Expand All';
   });
   /* ============ BACKEND INTEGRATION + FILE PARSING ============ */
 
@@ -1890,3 +2003,5 @@
 
 </body>
 </html>
+
+
