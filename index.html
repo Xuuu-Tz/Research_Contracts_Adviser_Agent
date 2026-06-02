@@ -1741,7 +1741,7 @@
         <div class="clause-body-inner">
           <div class="requirement-box">
             <div class="requirement-line">
-              <strong>Clause [${f.clauseRef} / ${f.title} || 'No title available.']:</strong>
+              <strong>Clause [${f.clauseRef} / ${f.title || 'No title available.' }]:</strong>
               <span>“${f.snippet || 'No snippet available.'}”</span>
             </div>
           </div>
