@@ -631,17 +631,36 @@ Choose exactly one primaryType from this list:
 
 Use clause signals, not the file name.
 
+Direction and data-transfer priority rules:
+- First determine whether the contract is mainly about transferring, sharing, receiving, accessing, or using data.
+- If the contract contains terms such as Data, data sharing, clinical data, health information, personal information, privacy, data protection, data breach, data contravention, loss of data, secure transfer of data, or approved purpose for data use, classify it as a Data Transfer Agreement or Data Access Agreement before considering Confidential Disclosure Agreement.
+- Do not classify a contract as Confidential Disclosure Agreement only because it contains confidentiality, non-disclosure, Discloser, Recipient, or Confidential Information wording.
+- Confidential Disclosure Agreement should be used only where the main purpose is confidentiality/non-disclosure, not transfer or use of data.
+
+Data Transfer Agreement direction:
+- Data Transfer Agreement - Incoming: an external Provider, Discloser, agency, company, hospital, or other non-UoA party provides or transfers data to the University. Indicators include "University is Recipient", "Provider provides Data to the University", "Discloser provides data to the Recipient", or "University wishes to obtain data".
+- Data Transfer Agreement - Outgoing: the University provides or transfers data to another party. Indicators include "University provides Data", "Data held by the University", "Recipient wishes to obtain data held by the University", or "University agrees to provide the Recipient with Data".
+
+If both confidentiality and data-transfer signals are present, prefer Data Transfer Agreement and choose Incoming or Outgoing based on the direction of data flow.
+
 Priority rule:
 - If the contract contains repeated "Work Order", "Statement of Work", "future Work Order", "work order issued under this Agreement", or similar umbrella/framework signals, classify it as Master Services Agreement even if the University is described as a service provider.
 - Provision of Services Agreement - Agency is for a single services arrangement without a master framework for future work orders or statements of work.
 - Research Services Agreement - Agency is for research-specific services, testing, analysis, expertise, or research deliverables; do not use it for general master/work-order frameworks.
 
 Classification and UoA template mapping:
-- Confidential Disclosure Agreement: disclosure, recipient, non-use, non-disclosure, mutual confidentiality, evaluation purpose. Template: UoA-CDA Two Way Template.docx.
-- Data Access Agreement - Incoming Agency: University accesses or receives access to agency or external-party data without necessarily taking full data transfer ownership. Template: UoA-Data Access Agreement Agency Template (incoming) May 2024 (1).docx.
+- Confidential Disclosure Agreement: mutual or one-way confidentiality / non-disclosure for discussions, evaluation, negotiations, or exchange of confidential information, where the main purpose is NOT transfer, receipt, sharing, access, or use of a dataset. Template: UoA-CDA Two Way Template.docx.
+- Data Access Agreement - Incoming Agency: the University is granted access to data held by an external Provider, usually through a database, portal, repository, system, login, access period, or secure access arrangement. The key signal is access to externally held data, not receipt of a transferred dataset. Template: UoA-Data Access Agreement Agency Template (incoming) May 2024 (1).docx.
 - Data Access Agreement - Outgoing: another party accesses data held by the University. Template: UoA-Data Access Agreement Template (outgoing) May 2024.docx.
-- Data Transfer Agreement - Incoming: data is transferred from another party/provider to the University. Template: UoA-Data Transfer Agreement Template (incoming) April 2024 .docx.
-- Data Transfer Agreement - Outgoing: University transfers data to another party/recipient. Template: UoA-Data Transfer Agreement Template (outgoing) April 2024.docx.
+- Data Transfer Agreement - Incoming: an external Provider / Discloser / agency / company provides, discloses, supplies, transfers, sends, copies, delivers, or makes available data, datasets, clinical data, health information, personal information, de-identified data, records, or confidential information containing data to the University. The key signal is that the University receives or may copy/use a provided dataset. Template: UoA-Data Transfer Agreement Template (incoming) April 2024 .docx.
+
+Critical distinction:
+- If the contract says the external party "provides", "discloses", "supplies", "transfers", "sends", "copies", "delivers", or "makes available" data to the University, classify it as Data Transfer Agreement - Incoming.
+- If the University is the Recipient and the external party is the Discloser or Provider of clinical data, health information, personal information, de-identified data, records, datasets, or confidential information containing data, classify it as Data Transfer Agreement - Incoming.
+- Do not classify as Data Access Agreement - Incoming Agency merely because the contract uses the words "access", "licence", "copy", or "use".
+- Data Access Agreement - Incoming Agency should be used only where the main arrangement is access to data held in another party's database, portal, repository, or system.
+
+- Data Transfer Agreement - Outgoing: the University transfers or provides Data held by the University to an external Recipient, and the external Recipient receives, accesses, stores, uses, or analyses the Data. Template: UoA-Data Transfer Agreement Template (outgoing) April 2024.docx.
 - Material Transfer Agreement - Outbound Key Materials: University provides key materials using the older key materials outbound template. Template: UoA-MTA_Outbound for Key Materials-April 2018.docx.
 - Master Services Agreement: umbrella/master services terms governing future statements of work or service orders. Template: UoA-Master Services Agreement Template (1).docx.
 - Material Transfer Agreement - Incoming: University receives materials, samples, progeny, modifications, or other research materials. Template: UoA-Material_Transfer_Agreement incoming-Aug 2024.docx.

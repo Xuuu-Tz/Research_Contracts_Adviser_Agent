@@ -1739,36 +1739,17 @@
 
       <div class="clause-body">
         <div class="clause-body-inner">
-          <div class="snippet">
-            <span>${f.snippet || 'No snippet available.'}</span>
+          <div class="requirement-box">
+            <div class="requirement-line">
+              <strong>Clause [${f.clauseRef} / ${f.title} || 'No title available.']:</strong>
+              <span>“${f.snippet || 'No snippet available.'}”</span>
+            </div>
           </div>
 
-          ${
-            sev === 'red'
-              ? `
-                <div class="rationale-label">Conflicting UoA Rule / Prohibition</div>
-                <div class="rationale">
-                  ${f.matchedPosition || 'No specific UoA rule identified.'}
-                </div>
-              `
-              : ''
-          }
-
-          <div class="rationale-label" style="${sev === 'red' ? 'margin-top:12px;' : ''}">Rationale</div>
-          <div class="rationale">
-            ${f.rationale || 'No issue identified.'}
+          <div class="rationale-box">
+            <strong>Rationale:</strong>
+            <span>${f.rationale || 'No issue identified.'}</span>
           </div>
-
-          ${
-            sev === 'red'
-              ? `
-                <div class="rationale-label" style="margin-top:12px;">Required Escalation</div>
-                <div class="rationale">
-                  ${f.requiredEscalation || 'Contract Manager / Legal Team'}
-                </div>
-              `
-              : ''
-          }
         </div>
       </div>
     `;
