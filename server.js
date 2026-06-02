@@ -412,6 +412,56 @@ function compactContractSignals(contractText, maxChars = 3000) {
     : contractText;
 }
 
+
+function countPhrase(text, phrase) {
+  const pattern = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return (text.match(new RegExp(pattern, "gi")) || []).length;
+}
+
+function hasMasterServicesSignals(contractText) {
+  const text = String(contractText || "");
+  const workOrderCount = countPhrase(text, "Work Order");
+  const statementOfWorkCount = countPhrase(text, "Statement of Work");
+
+  return (
+    workOrderCount >= 5 ||
+    statementOfWorkCount >= 3 ||
+    /future\s+Work\s+Order/i.test(text) ||
+    /Services\s+means\s+the\s+services\s+described\s+(within|in)\s+any\s+Work\s+Order/i.test(text) ||
+    /Work\s+Order\s+issued\s+under\s+this\s+Agreement/i.test(text) ||
+    /On\s+both\s+parties\s+signing\s+a\s+completed\s+statement\s+of\s+work/i.test(text)
+  );
+}
+
+function applyClassificationOverrides(parsed, contractText) {
+  if (!parsed || typeof parsed !== "object") return parsed;
+
+  const masterSignals = hasMasterServicesSignals(contractText);
+  const serviceLikeType =
+    parsed.primaryType === "Provision of Services Agreement - Agency" ||
+    parsed.primaryType === "Research Services Agreement - Agency" ||
+    parsed.primaryType === "Other / Unknown";
+
+  if (masterSignals && serviceLikeType) {
+    parsed.secondaryTypes = Array.isArray(parsed.secondaryTypes) ? parsed.secondaryTypes : [];
+
+    if (!parsed.secondaryTypes.includes(parsed.primaryType) && parsed.primaryType !== "Other / Unknown") {
+      parsed.secondaryTypes.unshift(parsed.primaryType);
+    }
+
+    parsed.primaryType = "Master Services Agreement";
+    parsed.selectedTemplate = "UoA-Master Services Agreement Template (1).docx";
+    parsed.confidence = Math.max(typeof parsed.confidence === "number" ? parsed.confidence : 0, 0.9);
+    parsed.evidence = [
+      "The agreement repeatedly uses Work Orders / future Work Orders, indicating an umbrella framework for future service engagements.",
+      ...(Array.isArray(parsed.evidence) ? parsed.evidence : [])
+    ].slice(0, 5);
+    parsed.needsHumanConfirmation = false;
+  }
+
+  return parsed;
+}
+
 function getTemplateFileHints(contractType, classification) {
   const hints = new Set([
     ...(TEMPLATE_FILE_HINTS[contractType] || []),
@@ -581,6 +631,11 @@ Choose exactly one primaryType from this list:
 
 Use clause signals, not the file name.
 
+Priority rule:
+- If the contract contains repeated "Work Order", "Statement of Work", "future Work Order", "work order issued under this Agreement", or similar umbrella/framework signals, classify it as Master Services Agreement even if the University is described as a service provider.
+- Provision of Services Agreement - Agency is for a single services arrangement without a master framework for future work orders or statements of work.
+- Research Services Agreement - Agency is for research-specific services, testing, analysis, expertise, or research deliverables; do not use it for general master/work-order frameworks.
+
 Classification and UoA template mapping:
 - Confidential Disclosure Agreement: disclosure, recipient, non-use, non-disclosure, mutual confidentiality, evaluation purpose. Template: UoA-CDA Two Way Template.docx.
 - Data Access Agreement - Incoming Agency: University accesses or receives access to agency or external-party data without necessarily taking full data transfer ownership. Template: UoA-Data Access Agreement Agency Template (incoming) May 2024 (1).docx.
@@ -665,6 +720,8 @@ ${contractExcerpt(contractText)}
   if (!Array.isArray(parsed.evidence)) {
     parsed.evidence = [];
   }
+
+  applyClassificationOverrides(parsed, contractText);
 
   parsed.needsHumanConfirmation =
     parsed.needsHumanConfirmation === true ||
