@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
@@ -143,6 +143,42 @@ function buildExpectedClauseCoverage(clauseInventory) {
     ? declaredCount
     : clauses.length;
 
+  if (expectedCount > 0 && expectedCount < clauses.length) {
+    const numericClauses = clauses.filter(clause => /^\d+$/.test(normalizeClauseRefForMatch(clause.clauseRef)));
+
+    if (numericClauses.length >= Math.ceil(clauses.length * 0.6)) {
+      const byRef = new Map();
+
+      for (const clause of numericClauses) {
+        const ref = normalizeClauseRefForMatch(clause.clauseRef);
+        const refNumber = Number(ref);
+
+        if (!Number.isInteger(refNumber) || refNumber < 1 || refNumber > expectedCount) {
+          continue;
+        }
+
+        byRef.set(ref, clause);
+      }
+
+      const expectedClauses = [];
+
+      for (let index = 1; index <= expectedCount; index++) {
+        const ref = String(index);
+        expectedClauses.push(
+          byRef.get(ref) || {
+            clauseRef: ref,
+            heading: "Recognised clause missing from clause inventory details",
+            confidence: 0
+          }
+        );
+      }
+
+      return expectedClauses;
+    }
+
+    return clauses.slice(0, expectedCount);
+  }
+
   if (expectedCount <= clauses.length) {
     return clauses;
   }
@@ -197,6 +233,51 @@ function createBlueCoverageFlag(clause) {
   };
 }
 
+function compareClauseRefs(a, b) {
+  const aRef = normalizeClauseRefForMatch(a.clauseRef);
+  const bRef = normalizeClauseRefForMatch(b.clauseRef);
+  const aNumber = Number(aRef);
+  const bNumber = Number(bRef);
+
+  if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) {
+    return aNumber - bNumber;
+  }
+
+  return aRef.localeCompare(bRef);
+}
+
+function severityPriority(severity) {
+  return { red: 4, amber: 3, blue: 2, green: 1 }[String(severity || "").toLowerCase()] || 0;
+}
+
+function isPlaceholderSnippet(snippet) {
+  const text = String(snippet || "");
+  return (
+    text.startsWith("No snippet returned") ||
+    text.startsWith("No exact clause excerpt") ||
+    text === "No snippet available."
+  );
+}
+
+function flagContentScore(flag) {
+  let score = 0;
+
+  if (!isPlaceholderSnippet(flag.snippet)) score += 3;
+  if (flag.matchedPosition && flag.matchedPosition !== "Not specified.") score += 2;
+  if (flag.rationale && !flag.rationale.includes("No issue identified")) score += 1;
+  if (flag.title && flag.title !== "Untitled Clause") score += 1;
+
+  return score;
+}
+
+function chooseBestFlag(flags) {
+  return [...flags].sort((a, b) => {
+    const severityDiff = severityPriority(b.severity) - severityPriority(a.severity);
+    if (severityDiff !== 0) return severityDiff;
+    return flagContentScore(b) - flagContentScore(a);
+  })[0];
+}
+
 function addMissingClauseCoverage(result, clauseInventory) {
   const clauses = buildExpectedClauseCoverage(clauseInventory);
 
@@ -204,30 +285,70 @@ function addMissingClauseCoverage(result, clauseInventory) {
     result.coverage = {
       recognisedClauseCount: 0,
       reviewedFlagCount: result.flags.length,
-      addedBlueFlags: 0
+      addedBlueFlags: 0,
+      droppedExtraFlags: 0,
+      mergedDuplicateFlags: 0
     };
     return;
   }
 
-  const existingClauseRefs = new Set(
-    result.flags
-      .map(flag => normalizeClauseRefForMatch(flag.clauseRef))
-      .filter(Boolean)
+  const expectedByRef = new Map(
+    clauses
+      .map(clause => [normalizeClauseRefForMatch(clause.clauseRef), clause])
+      .filter(([key]) => Boolean(key))
   );
+  const flagsByRef = new Map();
   let addedBlueFlags = 0;
+  let droppedExtraFlags = 0;
+  let mergedDuplicateFlags = 0;
 
-  for (const clause of clauses) {
-    const clauseKey = normalizeClauseRefForMatch(clause.clauseRef);
+  for (const flag of result.flags) {
+    const key = normalizeClauseRefForMatch(flag.clauseRef);
 
-    if (!clauseKey || existingClauseRefs.has(clauseKey)) {
+    if (!key || !expectedByRef.has(key)) {
+      droppedExtraFlags++;
       continue;
     }
 
-    result.flags.push(createBlueCoverageFlag(clause));
+    if (!flagsByRef.has(key)) {
+      flagsByRef.set(key, []);
+    }
 
-    existingClauseRefs.add(clauseKey);
-    addedBlueFlags++;
+    flagsByRef.get(key).push(flag);
   }
+
+  const alignedFlags = [];
+
+  for (const clause of clauses) {
+    const clauseKey = normalizeClauseRefForMatch(clause.clauseRef);
+    const flagsForClause = flagsByRef.get(clauseKey) || [];
+
+    if (!clauseKey) {
+      continue;
+    }
+
+    if (flagsForClause.length === 0) {
+      alignedFlags.push(createBlueCoverageFlag(clause));
+      addedBlueFlags++;
+      continue;
+    }
+
+    if (flagsForClause.length > 1) {
+      mergedDuplicateFlags += flagsForClause.length - 1;
+    }
+
+    const chosenFlag = chooseBestFlag(flagsForClause);
+    alignedFlags.push({
+      ...chosenFlag,
+      clauseRef: clause.clauseRef,
+      title:
+        chosenFlag.title && chosenFlag.title !== "Untitled Clause"
+          ? chosenFlag.title
+          : clause.heading || "Untitled Clause"
+    });
+  }
+
+  result.flags = alignedFlags.sort(compareClauseRefs);
 
   while (result.flags.length < clauses.length) {
     const placeholderNumber = result.flags.length + 1;
@@ -243,7 +364,9 @@ function addMissingClauseCoverage(result, clauseInventory) {
   result.coverage = {
     recognisedClauseCount: clauses.length,
     reviewedFlagCount: result.flags.length,
-    addedBlueFlags
+    addedBlueFlags,
+    droppedExtraFlags,
+    mergedDuplicateFlags
   };
 }
 
