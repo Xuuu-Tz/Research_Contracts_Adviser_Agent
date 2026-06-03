@@ -1766,6 +1766,8 @@
   document.getElementById('newReviewBtn').addEventListener('click', () => {
     report.classList.remove('shown');
     hero.style.display = 'grid';
+    document.getElementById('contractType').value = 'auto';
+    document.getElementById('counterparty').value = '';
     setFile(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
