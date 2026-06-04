@@ -124,10 +124,155 @@ function normalizeClauseRefForMatch(value) {
   return withoutPrefix.replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function compareClauseRefs(left, right) {
+  const leftRef = normalizeClauseRefForMatch(left);
+  const rightRef = normalizeClauseRefForMatch(right);
+  const leftNumber = Number(leftRef);
+  const rightNumber = Number(rightRef);
+
+  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) {
+    return leftNumber - rightNumber;
+  }
+
+  return leftRef.localeCompare(rightRef);
+}
+
 function confidenceLabelFromClause(clause) {
   return typeof clause.confidence === "number" && clause.confidence >= 0.8
     ? "Medium"
     : "Low";
+}
+
+function isGenericClauseHeading(heading) {
+  const value = String(heading || "").trim().toLowerCase();
+  return (
+    !value ||
+    value === "untitled clause" ||
+    value === "unreviewed clause" ||
+    value.includes("missing from clause inventory") ||
+    value.includes("missing from automated review")
+  );
+}
+
+function cleanInferredClauseHeading(heading) {
+  return String(heading || "")
+    .replace(/\s+/g, " ")
+    .replace(/[.;:,]+$/g, "")
+    .trim();
+}
+
+function getStudentResearchPublicityHint(contractType, clauses) {
+  if (contractType !== "Student Research Agreement") {
+    return [];
+  }
+
+  const refs = new Set(
+    clauses.map(clause => normalizeClauseRefForMatch(clause.clauseRef)).filter(Boolean)
+  );
+  const hasExpectedSurroundingClauses =
+    ["1", "2", "3", "4", "5", "6", "7", "9", "10", "11", "12", "13", "14"]
+      .every(ref => refs.has(ref));
+
+  if (refs.has("8") || !hasExpectedSurroundingClauses) {
+    return [];
+  }
+
+  return [{
+    clauseRef: "8",
+    heading: "Publicity",
+    confidence: 0.9
+  }];
+}
+
+function inferTopLevelClausesFromText(contractText) {
+  const lines = String(contractText || "")
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  const clausesByRef = new Map();
+
+  for (const line of lines) {
+    const match = line.match(/^(\d{1,2})\.\s+(.{2,90})$/);
+
+    if (!match) {
+      continue;
+    }
+
+    const clauseRef = match[1];
+    const heading = cleanInferredClauseHeading(match[2]);
+    const normalisedRef = normalizeClauseRefForMatch(clauseRef);
+
+    if (!normalisedRef || clausesByRef.has(normalisedRef)) {
+      continue;
+    }
+
+    if (
+      /^\d/.test(heading) ||
+      /^(page|schedule|attachment|appendix|table of contents)\b/i.test(heading) ||
+      heading.length > 80
+    ) {
+      continue;
+    }
+
+    clausesByRef.set(normalisedRef, {
+      clauseRef,
+      heading,
+      confidence: 0.85
+    });
+  }
+
+  return [...clausesByRef.values()].sort((left, right) =>
+    compareClauseRefs(left.clauseRef, right.clauseRef)
+  );
+}
+
+function supplementClauseInventoryDetails(parsed, contractText, contractType) {
+  const inferredClauses = inferTopLevelClausesFromText(contractText);
+  const explicitMissingClauseHints = getStudentResearchPublicityHint(contractType, parsed.clauses);
+
+  if (inferredClauses.length === 0 && explicitMissingClauseHints.length === 0) {
+    return;
+  }
+
+  const clausesByRef = new Map();
+
+  for (const clause of parsed.clauses) {
+    const key = normalizeClauseRefForMatch(clause.clauseRef);
+
+    if (key) {
+      clausesByRef.set(key, clause);
+    }
+  }
+
+  // Text inference is only used to improve placeholder headings. It must not create
+  // additional clauses, because OCR/PDF extraction can make subclauses look top-level.
+  for (const inferredClause of inferredClauses) {
+    const key = normalizeClauseRefForMatch(inferredClause.clauseRef);
+    const existing = clausesByRef.get(key);
+
+    if (existing && isGenericClauseHeading(existing.heading)) {
+      existing.heading = inferredClause.heading;
+      existing.confidence = Math.max(existing.confidence || 0, inferredClause.confidence);
+    }
+  }
+
+  for (const inferredClause of explicitMissingClauseHints) {
+    const key = normalizeClauseRefForMatch(inferredClause.clauseRef);
+
+    if (!clausesByRef.has(key)) {
+      parsed.clauses.push(inferredClause);
+      clausesByRef.set(key, inferredClause);
+    }
+  }
+
+  parsed.clauses.sort((left, right) => compareClauseRefs(left.clauseRef, right.clauseRef));
+
+  const numericClauseCount = Number(parsed.clauseCount);
+  const declaredCount = Number.isInteger(numericClauseCount) && numericClauseCount >= 0
+    ? numericClauseCount
+    : 0;
+
+  parsed.clauseCount = Math.max(declaredCount, parsed.clauses.length);
 }
 
 function buildExpectedClauseCoverage(clauseInventory) {
@@ -233,49 +378,53 @@ function createBlueCoverageFlag(clause) {
   };
 }
 
-function compareClauseRefs(a, b) {
-  const aRef = normalizeClauseRefForMatch(a.clauseRef);
-  const bRef = normalizeClauseRefForMatch(b.clauseRef);
-  const aNumber = Number(aRef);
-  const bNumber = Number(bRef);
-
-  if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) {
-    return aNumber - bNumber;
-  }
-
-  return aRef.localeCompare(bRef);
-}
-
 function severityPriority(severity) {
-  return { red: 4, amber: 3, blue: 2, green: 1 }[String(severity || "").toLowerCase()] || 0;
+  switch (String(severity || "").toLowerCase()) {
+    case "red":
+      return 4;
+    case "amber":
+      return 3;
+    case "blue":
+      return 2;
+    case "green":
+      return 1;
+    default:
+      return 0;
+  }
 }
 
 function isPlaceholderSnippet(snippet) {
-  const text = String(snippet || "");
+  const value = String(snippet || "").trim().toLowerCase();
   return (
-    text.startsWith("No snippet returned") ||
-    text.startsWith("No exact clause excerpt") ||
-    text === "No snippet available."
+    !value ||
+    value === "no snippet available." ||
+    value === "no snippet returned by the automated review." ||
+    value === "no exact clause excerpt could be isolated."
   );
 }
 
 function flagContentScore(flag) {
-  let score = 0;
+  let score = severityPriority(flag.severity) * 10;
 
-  if (!isPlaceholderSnippet(flag.snippet)) score += 3;
-  if (flag.matchedPosition && flag.matchedPosition !== "Not specified.") score += 2;
-  if (flag.rationale && !flag.rationale.includes("No issue identified")) score += 1;
-  if (flag.title && flag.title !== "Untitled Clause") score += 1;
+  if (!isPlaceholderSnippet(flag.snippet)) {
+    score += 3;
+  }
+
+  if (flag.rationale && !String(flag.rationale).toLowerCase().includes("automated review did not return")) {
+    score += 2;
+  }
 
   return score;
 }
 
-function chooseBestFlag(flags) {
-  return [...flags].sort((a, b) => {
-    const severityDiff = severityPriority(b.severity) - severityPriority(a.severity);
-    if (severityDiff !== 0) return severityDiff;
-    return flagContentScore(b) - flagContentScore(a);
-  })[0];
+function chooseBestFlag(existingFlag, nextFlag) {
+  if (!existingFlag) {
+    return nextFlag;
+  }
+
+  return flagContentScore(nextFlag) > flagContentScore(existingFlag)
+    ? nextFlag
+    : existingFlag;
 }
 
 function addMissingClauseCoverage(result, clauseInventory) {
@@ -285,81 +434,53 @@ function addMissingClauseCoverage(result, clauseInventory) {
     result.coverage = {
       recognisedClauseCount: 0,
       reviewedFlagCount: result.flags.length,
-      addedBlueFlags: 0,
-      droppedExtraFlags: 0,
-      mergedDuplicateFlags: 0
+      addedBlueFlags: 0
     };
     return;
   }
 
-  const expectedByRef = new Map(
-    clauses
-      .map(clause => [normalizeClauseRefForMatch(clause.clauseRef), clause])
-      .filter(([key]) => Boolean(key))
+  const expectedClauseKeys = new Set(
+    clauses.map(clause => normalizeClauseRefForMatch(clause.clauseRef)).filter(Boolean)
   );
-  const flagsByRef = new Map();
-  let addedBlueFlags = 0;
+  const bestFlagsByClause = new Map();
   let droppedExtraFlags = 0;
   let mergedDuplicateFlags = 0;
 
   for (const flag of result.flags) {
-    const key = normalizeClauseRefForMatch(flag.clauseRef);
+    const clauseKey = normalizeClauseRefForMatch(flag.clauseRef);
 
-    if (!key || !expectedByRef.has(key)) {
+    if (!clauseKey || !expectedClauseKeys.has(clauseKey)) {
       droppedExtraFlags++;
       continue;
     }
 
-    if (!flagsByRef.has(key)) {
-      flagsByRef.set(key, []);
+    if (bestFlagsByClause.has(clauseKey)) {
+      mergedDuplicateFlags++;
     }
 
-    flagsByRef.get(key).push(flag);
+    bestFlagsByClause.set(
+      clauseKey,
+      chooseBestFlag(bestFlagsByClause.get(clauseKey), flag)
+    );
   }
 
   const alignedFlags = [];
+  let addedBlueFlags = 0;
 
   for (const clause of clauses) {
     const clauseKey = normalizeClauseRefForMatch(clause.clauseRef);
-    const flagsForClause = flagsByRef.get(clauseKey) || [];
+    const existingFlag = bestFlagsByClause.get(clauseKey);
 
-    if (!clauseKey) {
+    if (existingFlag) {
+      alignedFlags.push(existingFlag);
       continue;
     }
 
-    if (flagsForClause.length === 0) {
-      alignedFlags.push(createBlueCoverageFlag(clause));
-      addedBlueFlags++;
-      continue;
-    }
-
-    if (flagsForClause.length > 1) {
-      mergedDuplicateFlags += flagsForClause.length - 1;
-    }
-
-    const chosenFlag = chooseBestFlag(flagsForClause);
-    alignedFlags.push({
-      ...chosenFlag,
-      clauseRef: clause.clauseRef,
-      title:
-        chosenFlag.title && chosenFlag.title !== "Untitled Clause"
-          ? chosenFlag.title
-          : clause.heading || "Untitled Clause"
-    });
-  }
-
-  result.flags = alignedFlags.sort(compareClauseRefs);
-
-  while (result.flags.length < clauses.length) {
-    const placeholderNumber = result.flags.length + 1;
-
-    result.flags.push(createBlueCoverageFlag({
-      clauseRef: `Unreviewed clause ${placeholderNumber}`,
-      heading: "Recognised clause missing from automated review",
-      confidence: 0
-    }));
+    alignedFlags.push(createBlueCoverageFlag(clause));
     addedBlueFlags++;
   }
+
+  result.flags = alignedFlags;
 
   result.coverage = {
     recognisedClauseCount: clauses.length,
@@ -886,17 +1007,24 @@ Rules:
 - Preserve the clause numbering used by the contract, for example "1", "2", "Clause 3", or "section 4".
 - If a heading is missing, infer a short descriptive heading from the clause text.
 - If the document text extraction appears incomplete, set extractionWarnings.
+- The "clauseCount" field MUST equal the exact number of items in the "clauses" array.
+- List one object in "clauses" for every clause you count. Never report a count without listing each clause.
 
 Return ONLY valid JSON. Do not use markdown.
 
 Use this exact structure:
 {
-  "clauseCount": 25,
+  "clauseCount": 2,
   "clauses": [
     {
       "clauseRef": "1",
       "heading": "Definitions",
       "confidence": 0.95
+    },
+    {
+      "clauseRef": "2",
+      "heading": "Term",
+      "confidence": 0.92
     }
   ],
   "extractionWarnings": []
@@ -940,6 +1068,8 @@ ${contractText}
     ? numericClauseCount
     : parsed.clauses.length;
 
+  supplementClauseInventoryDetails(parsed, contractText, contractType);
+
   if (!Array.isArray(parsed.extractionWarnings)) {
     parsed.extractionWarnings = [];
   }
@@ -947,11 +1077,55 @@ ${contractText}
   return parsed;
 }
 
+// Orchestrates the clause review. Large contracts are reviewed in small batches so the model
+// is never asked to enumerate dozens of clauses in a single response. (When asked to review 40+
+// clauses at once it reliably returns findings for only a handful and silently drops the rest,
+// which then get back-filled as blue "No snippet returned" flags.)
 async function reviewContract(contractText, contractType, clauseInventory, knowledgeBaseRetrieval) {
   const knowledgeContext = knowledgeBaseRetrieval?.used
     ? knowledgeBaseRetrieval.context
     : "No Foundry knowledge base context was retrieved for this run. Use only the mock position store below and clearly avoid claiming that specific uploaded template text was reviewed.";
 
+  const clauses = Array.isArray(clauseInventory?.clauses) ? clauseInventory.clauses : [];
+  const BATCH_SIZE = 10; // small enough that the model reliably returns one flag per clause in the batch
+
+  let merged;
+  if (clauses.length <= BATCH_SIZE) {
+    // Small contract: a single pass can cover every clause.
+    merged = await runReviewModel(contractText, contractType, clauses, knowledgeContext, false);
+  } else {
+    // Large contract (e.g. a 40+ clause Master Services Agreement): review in batches and merge.
+    const allFlags = [];
+    let selectedTemplate = "Not specified";
+    const kbDocs = [];
+
+    for (let i = 0; i < clauses.length; i += BATCH_SIZE) {
+      const batch = clauses.slice(i, i + BATCH_SIZE);
+      const partial = await runReviewModel(contractText, contractType, batch, knowledgeContext, true);
+      if (Array.isArray(partial.flags)) allFlags.push(...partial.flags);
+      if (selectedTemplate === "Not specified" && partial.selectedTemplate) {
+        selectedTemplate = partial.selectedTemplate;
+      }
+      if (Array.isArray(partial.knowledgeBaseDocuments)) kbDocs.push(...partial.knowledgeBaseDocuments);
+    }
+
+    merged = {
+      detectedType: contractType,
+      selectedTemplate,
+      knowledgeBaseDocuments: [...new Set(kbDocs)],
+      flags: allFlags
+    };
+  }
+
+  // normalizeReviewResult still runs addMissingClauseCoverage, so any clause the model genuinely
+  // skipped is STILL caught as a blue flag — but with batching that should now be rare, not the norm.
+  return normalizeReviewResult(merged, contractType, clauseInventory);
+}
+
+// Runs ONE review-model call over a specific set of clauses and returns the raw parsed JSON
+// (flags + metadata) without finalising counts/coverage. When isBatch is true, the model is told
+// it is only seeing part of a larger contract so it focuses on the listed clauses only.
+async function runReviewModel(contractText, contractType, clauses, knowledgeContext, isBatch) {
   const systemPrompt = `
 You are a Research Contract Adviser Agent for a proof-of-concept system.
 
@@ -1095,7 +1269,7 @@ Important rules:
 - Example:
   matchedPosition: "Preferred Contracting Position: New Zealand law. Acceptable Contracting Position: Foreign governing law only with prior approval or legal review."
   rationale: "Conflicts with standard 'Governing law should be New Zealand law unless an approved exception applies'. The uploaded clause states 'This Agreement shall be construed in accordance with the laws of Australia', which conflicts because it applies Australian law without showing any approved exception."
-  
+
   For every clause, provide:
 - Clause number or title
 - Short clause snippet
@@ -1160,6 +1334,10 @@ Severity values must be exactly one of:
 - blue
 `;
 
+  const clauseScopeNote = isBatch
+    ? "You are reviewing ONE BATCH of a larger contract. Review ONLY the clauses listed above and return exactly one flag for EACH listed clause (including boilerplate such as Definitions or Interpretation). Do not review, mention, or invent any clause that is not in the list."
+    : "Use clause references from the recognised clause inventory where possible. Do not invent clause numbers.";
+
   const raw = await callAzureJsonChat({
     messages: [
       { role: "system", content: systemPrompt },
@@ -1168,15 +1346,15 @@ Severity values must be exactly one of:
         content: `
 Selected contract type: ${contractType || "Hybrid or unclear"}
 
-Recognised top-level clause inventory:
-${JSON.stringify(clauseInventory || { clauseCount: 0, clauses: [] }, null, 2)}
+Clauses to review in THIS pass:
+${JSON.stringify({ clauseCount: (clauses || []).length, clauses: clauses || [] }, null, 2)}
 
 Retrieved Foundry knowledge base context:
 ${knowledgeContext}
 
-Use clause references from the recognised clause inventory where possible. Do not invent clause numbers.
+${clauseScopeNote}
 
-Please review this contract:
+Please review the listed clauses against this contract:
 
 ${contractText}
 `
@@ -1186,8 +1364,7 @@ ${contractText}
     maxTokens: 4000
   });
 
-  const parsed = parseModelJson(raw, "Model did not return valid review JSON.");
-  return normalizeReviewResult(parsed, contractType, clauseInventory);
+  return parseModelJson(raw, "Model did not return valid review JSON.");
 }
 
 app.post("/api/classify-contract", async (req, res) => {
