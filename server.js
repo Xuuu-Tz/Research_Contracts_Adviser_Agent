@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
@@ -287,6 +287,42 @@ function buildExpectedClauseCoverage(clauseInventory) {
   const expectedCount = Number.isInteger(declaredCount) && declaredCount > 0
     ? declaredCount
     : clauses.length;
+
+  if (expectedCount > 0 && expectedCount < clauses.length) {
+    const numericClauses = clauses.filter(clause => /^\d+$/.test(normalizeClauseRefForMatch(clause.clauseRef)));
+
+    if (numericClauses.length >= Math.ceil(clauses.length * 0.6)) {
+      const byRef = new Map();
+
+      for (const clause of numericClauses) {
+        const ref = normalizeClauseRefForMatch(clause.clauseRef);
+        const refNumber = Number(ref);
+
+        if (!Number.isInteger(refNumber) || refNumber < 1 || refNumber > expectedCount) {
+          continue;
+        }
+
+        byRef.set(ref, clause);
+      }
+
+      const expectedClauses = [];
+
+      for (let index = 1; index <= expectedCount; index++) {
+        const ref = String(index);
+        expectedClauses.push(
+          byRef.get(ref) || {
+            clauseRef: ref,
+            heading: "Recognised clause missing from clause inventory details",
+            confidence: 0
+          }
+        );
+      }
+
+      return expectedClauses;
+    }
+
+    return clauses.slice(0, expectedCount);
+  }
 
   if (expectedCount <= clauses.length) {
     return clauses;
